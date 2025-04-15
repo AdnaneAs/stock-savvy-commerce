@@ -1,6 +1,6 @@
 
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, createUserWithEmailAndPassword } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, arrayUnion, query, where, getDocs } from "firebase/firestore";
 
 // Your web app's Firebase configuration
@@ -48,9 +48,35 @@ const initializeAdminAccount = async () => {
         });
         
         console.log("Admin account created");
-      } catch (error) {
+      } catch (error: any) {
         // Admin might already exist in Auth but not in Firestore
-        console.log("Admin account exists in Auth:", error);
+        if (error.code === "auth/email-already-in-use") {
+          try {
+            // Try to sign in as admin
+            const credential = await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+            const adminUser = credential.user;
+            
+            // Check if admin exists in Firestore
+            const adminDoc = await getDoc(doc(db, "users", adminUser.uid));
+            if (!adminDoc.exists()) {
+              // Create admin user profile
+              await setDoc(doc(db, "users", adminUser.uid), {
+                uid: adminUser.uid,
+                email: adminEmail,
+                role: "admin",
+                displayName: "Admin",
+                createdAt: new Date(),
+                invitedUsers: [],
+                products: []
+              });
+              console.log("Admin profile created");
+            }
+          } catch (signInError) {
+            console.error("Error ensuring admin account:", signInError);
+          }
+        } else {
+          console.error("Error creating admin account:", error);
+        }
       }
     } else {
       console.log("Admin account already exists");
@@ -69,8 +95,8 @@ const createUserProfile = async (uid, userData) => {
     uid,
     ...userData,
     role: userData.role || "user",
-    invitedUsers: [],
-    products: [],
+    invitedUsers: userData.invitedUsers || [],
+    products: userData.products || [],
     createdAt: new Date()
   });
 };
@@ -86,11 +112,68 @@ const inviteUser = async (inviterUid, invitedUserUid) => {
   });
 };
 
+// Add product management functions
+const addUserProduct = async (uid, productData) => {
+  const productRef = doc(collection(db, "products"));
+  const productId = productRef.id;
+  
+  // Add product with owner information
+  await setDoc(productRef, {
+    id: productId,
+    ownerId: uid,
+    ...productData,
+    createdAt: new Date()
+  });
+  
+  // Add product ID to user's products array
+  await updateDoc(doc(db, "users", uid), {
+    products: arrayUnion(productId)
+  });
+  
+  return productId;
+};
+
+const getUserProducts = async (uid) => {
+  const productsRef = collection(db, "products");
+  const q = query(productsRef, where("ownerId", "==", uid));
+  const querySnapshot = await getDocs(q);
+  
+  const products = [];
+  querySnapshot.forEach((doc) => {
+    products.push(doc.data());
+  });
+  
+  return products;
+};
+
+const getAllUsers = async () => {
+  const usersRef = collection(db, "users");
+  const querySnapshot = await getDocs(usersRef);
+  
+  const users = [];
+  querySnapshot.forEach((doc) => {
+    users.push(doc.data());
+  });
+  
+  return users;
+};
+
+const updateUserRole = async (uid, newRole) => {
+  const userRef = doc(db, "users", uid);
+  await updateDoc(userRef, {
+    role: newRole
+  });
+};
+
 export { 
   auth, 
   googleProvider, 
   db, 
   createUserProfile, 
   getUserProfile,
-  inviteUser
+  inviteUser,
+  addUserProduct,
+  getUserProducts,
+  getAllUsers,
+  updateUserRole
 };

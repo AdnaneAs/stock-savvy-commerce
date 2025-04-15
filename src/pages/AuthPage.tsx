@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Boxes } from "lucide-react";
@@ -100,8 +99,11 @@ const AuthPage = () => {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
       
-      // Check if it's a new user
-      if (result._tokenResponse?.isNewUser) {
+      // Check if the user's metadata indicates a new user
+      // This is safer than using _tokenResponse which is causing the error
+      const isNewUser = user.metadata.creationTime === user.metadata.lastSignInTime;
+      
+      if (isNewUser) {
         await createUserProfile(user.uid, {
           email: user.email,
           displayName: user.displayName || user.email?.split('@')[0] || '',

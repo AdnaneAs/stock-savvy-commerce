@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Plus, Settings, Shield, UserPlus } from "lucide-react";
+import { MoreHorizontal, Plus, Settings, Shield, UserPlus, UserX, Lock, Key } from "lucide-react";
 import { useUser } from "@/components/auth/RequireAuth";
 import {
   DropdownMenu,
@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { db } from "@/lib/firebase";
+import { db, createUserProfile } from "@/lib/firebase";
 import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -77,7 +77,8 @@ const UsersPage = () => {
     if (!currentUser) return false;
     if (isAdmin) return true;
     
-    return currentUser.invitedUsers.length < 2;
+    // Regular users can only invite up to 2 users
+    return currentUser.invitedUsers?.length < 2;
   };
 
   const handleInviteUser = async () => {
@@ -103,27 +104,20 @@ const UsersPage = () => {
       const newUser = userCredential.user;
 
       // Create user profile in Firestore
-      await fetch("/api/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          uid: newUser.uid,
-          email: newUserEmail,
-          displayName: newUserName || newUserEmail.split("@")[0],
-          role: "user",
-          invitedBy: currentUser?.uid,
-          status: "Active",
-          invitedUsers: []
-        }),
+      await createUserProfile(newUser.uid, {
+        email: newUserEmail,
+        displayName: newUserName || newUserEmail.split("@")[0],
+        role: "user",
+        invitedBy: currentUser?.uid,
+        status: "Active",
+        invitedUsers: []
       });
 
       // Update inviter's invited users list
       if (currentUser) {
         const userRef = doc(db, "users", currentUser.uid);
         await updateDoc(userRef, {
-          invitedUsers: [...currentUser.invitedUsers, newUser.uid]
+          invitedUsers: [...(currentUser.invitedUsers || []), newUser.uid]
         });
       }
 
@@ -188,7 +182,7 @@ const UsersPage = () => {
             <p className="text-muted-foreground">
               {isAdmin 
                 ? "Manage all user accounts and permissions" 
-                : `You can invite up to 2 users (${currentUser?.invitedUsers.length || 0}/2 used)`}
+                : `You can invite up to 2 users (${currentUser?.invitedUsers?.length || 0}/2 used)`}
             </p>
           </div>
           <Dialog>
@@ -288,7 +282,7 @@ const UsersPage = () => {
                         <Avatar className="h-8 w-8">
                           <AvatarImage src={user.photoURL || `https://i.pravatar.cc/150?u=${user.email}`} />
                           <AvatarFallback>
-                            {user.displayName?.charAt(0) || user.email.charAt(0)}
+                            {user.displayName?.charAt(0) || user.email?.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
                         <span className="font-medium">{user.displayName || user.email.split('@')[0]}</span>
@@ -314,8 +308,24 @@ const UsersPage = () => {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => changeUserRole(user.uid, user.role === "admin" ? "user" : "admin")}>
+                              {user.role === "admin" ? (
+                                <>
+                                  <UserX className="mr-2 h-4 w-4" />
+                                  Remove admin role
+                                </>
+                              ) : (
+                                <>
+                                  <Shield className="mr-2 h-4 w-4" />
+                                  Make admin
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              // View user profile
+                              window.location.href = `/settings?uid=${user.uid}`;
+                            }}>
                               <Settings className="mr-2 h-4 w-4" />
-                              {user.role === "admin" ? "Remove admin role" : "Make admin"}
+                              View profile
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
