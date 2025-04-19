@@ -1,7 +1,6 @@
 
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
 import { 
   createUser, 
   getUserByUid, 
@@ -28,7 +27,6 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app); // Keep for compatibility
 const googleProvider = new GoogleAuthProvider();
 
 // Check if admin account exists, if not create it
@@ -54,8 +52,7 @@ const initializeAdminAccount = async () => {
           role: "admin",
           displayName: "Admin",
           createdAt: new Date().toISOString(),
-          invitedUsers: [],
-          products: []
+          invitedUsers: []
         });
         
         console.log("Admin account created");
@@ -77,8 +74,7 @@ const initializeAdminAccount = async () => {
                 role: "admin",
                 displayName: "Admin",
                 createdAt: new Date().toISOString(),
-                invitedUsers: [],
-                products: []
+                invitedUsers: []
               });
               console.log("Admin profile created");
             }
@@ -146,7 +142,6 @@ const updateUserRole = async (uid, newRole) => {
 export { 
   auth, 
   googleProvider, 
-  db, 
   createUserProfile, 
   getUserProfile,
   inviteUser,

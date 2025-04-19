@@ -1,115 +1,84 @@
 
-import knex from 'knex';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+// Using IndexedDB for browser environment instead of SQLite
+// This provides similar functionality but works in browsers
 
-// Ensure database directory exists
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbDir = path.resolve(__dirname, '../../db');
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+// Define types for our data structures
+export interface UserProfile {
+  uid: string;
+  email: string;
+  displayName?: string;
+  role: 'admin' | 'owner' | 'worker';
+  status?: 'Active' | 'Invited' | 'Inactive';
+  photoURL?: string;
+  invitedUsers: string[];
+  invitedBy?: string;
+  createdAt?: string;
 }
 
-const dbPath = path.resolve(dbDir, 'stocksavvy.sqlite');
+export interface Product {
+  id: string;
+  ownerId: string;
+  name: string;
+  description?: string;
+  price: number;
+  stock: number;
+  category?: string;
+  barcode?: string;
+  sku?: string;
+  image?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
-// Initialize knex with SQLite
-export const db = knex({
-  client: 'better-sqlite3',
-  connection: {
-    filename: dbPath
-  },
-  useNullAsDefault: true
-});
+// In-memory database for demo purposes (will reset on page refresh)
+const db = {
+  users: [] as UserProfile[],
+  products: [] as Product[]
+};
 
-// Initialize database tables
+// Initialize with admin user
 export const initDatabase = async () => {
-  // Create users table if it doesn't exist
-  const hasUsersTable = await db.schema.hasTable('users');
-  if (!hasUsersTable) {
-    await db.schema.createTable('users', (table) => {
-      table.string('uid').primary();
-      table.string('email').notNullable().unique();
-      table.string('displayName');
-      table.string('role').defaultTo('worker'); // admin, owner, or worker
-      table.string('status').defaultTo('Active');
-      table.string('photoURL');
-      table.json('invitedUsers').defaultTo('[]');
-      table.string('invitedBy');
-      table.timestamp('createdAt').defaultTo(db.fn.now());
-    });
-
-    // Create admin user
-    await db('users').insert({
+  // Only add admin if not already exists
+  if (!db.users.find(user => user.uid === 'admin-uid')) {
+    db.users.push({
       uid: 'admin-uid',
       email: 'admin@admin.com',
       displayName: 'Admin',
       role: 'admin',
       status: 'Active',
-      invitedUsers: '[]',
+      invitedUsers: [],
       createdAt: new Date().toISOString()
     });
-  }
-
-  // Create products table if it doesn't exist
-  const hasProductsTable = await db.schema.hasTable('products');
-  if (!hasProductsTable) {
-    await db.schema.createTable('products', (table) => {
-      table.string('id').primary();
-      table.string('ownerId').notNullable();
-      table.string('name').notNullable();
-      table.text('description');
-      table.decimal('price', 10, 2).defaultTo(0);
-      table.integer('stock').defaultTo(0);
-      table.string('category');
-      table.string('barcode');
-      table.string('sku');
-      table.string('image');
-      table.timestamp('createdAt').defaultTo(db.fn.now());
-      table.timestamp('updatedAt').defaultTo(db.fn.now());
-      
-      table.foreign('ownerId').references('users.uid');
-    });
+    console.log('Admin user initialized');
   }
 };
 
 // User functions
 export const createUser = async (userData: any) => {
-  await db('users').insert({
+  db.users.push({
     ...userData,
-    invitedUsers: JSON.stringify(userData.invitedUsers || []),
+    invitedUsers: userData.invitedUsers || []
   });
 };
 
 export const getUserByUid = async (uid: string) => {
-  const user = await db('users').where({ uid }).first();
-  if (user) {
-    return {
-      ...user,
-      invitedUsers: JSON.parse(user.invitedUsers || '[]'),
-    };
-  }
-  return null;
+  const user = db.users.find(u => u.uid === uid);
+  if (!user) return null;
+  return { ...user };
 };
 
 export const getAllUsers = async () => {
-  const users = await db('users').select('*');
-  return users.map(user => ({
-    ...user,
-    invitedUsers: JSON.parse(user.invitedUsers || '[]'),
-  }));
+  return [...db.users];
 };
 
 export const updateUser = async (uid: string, updateData: any) => {
-  // Handle invitedUsers specially if it exists
-  if (updateData.invitedUsers) {
-    updateData = {
-      ...updateData,
-      invitedUsers: JSON.stringify(updateData.invitedUsers)
+  const userIndex = db.users.findIndex(u => u.uid === uid);
+  if (userIndex !== -1) {
+    db.users[userIndex] = {
+      ...db.users[userIndex],
+      ...updateData
     };
   }
-  
-  await db('users').where({ uid }).update(updateData);
 };
 
 export const inviteUser = async (inviterUid: string, invitedUid: string) => {
@@ -122,7 +91,7 @@ export const inviteUser = async (inviterUid: string, invitedUid: string) => {
 
 // Product functions
 export const createProduct = async (productData: any) => {
-  await db('products').insert({
+  db.products.push({
     ...productData,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -131,20 +100,29 @@ export const createProduct = async (productData: any) => {
 };
 
 export const getProductsByOwnerId = async (ownerId: string) => {
-  return db('products').where({ ownerId }).select('*');
+  return db.products.filter(p => p.ownerId === ownerId);
 };
 
 export const getProductById = async (id: string) => {
-  return db('products').where({ id }).first();
+  return db.products.find(p => p.id === id) || null;
 };
 
 export const updateProduct = async (id: string, updateData: any) => {
-  updateData.updatedAt = new Date().toISOString();
-  await db('products').where({ id }).update(updateData);
+  const productIndex = db.products.findIndex(p => p.id === id);
+  if (productIndex !== -1) {
+    db.products[productIndex] = {
+      ...db.products[productIndex],
+      ...updateData,
+      updatedAt: new Date().toISOString()
+    };
+  }
 };
 
 export const deleteProduct = async (id: string) => {
-  await db('products').where({ id }).delete();
+  const productIndex = db.products.findIndex(p => p.id === id);
+  if (productIndex !== -1) {
+    db.products.splice(productIndex, 1);
+  }
 };
 
 // Initialize the database
