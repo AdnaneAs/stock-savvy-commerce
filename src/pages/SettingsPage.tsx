@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -24,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Shield, User, Users, Lock } from "lucide-react";
 import { UserProfile } from "@/components/auth/RequireAuth";
+import LocalizationSettings from "@/components/settings/LocalizationSettings";
 
 const SettingsPage = () => {
   const { user, isAdmin } = useUser();
@@ -42,7 +42,6 @@ const SettingsPage = () => {
 
   useEffect(() => {
     const loadUserProfile = async () => {
-      // Check if admin is viewing another user's profile
       if (viewingUserId && isAdmin && viewingUserId !== user?.uid) {
         try {
           const otherUserProfile = await getUserProfile(viewingUserId);
@@ -70,7 +69,6 @@ const SettingsPage = () => {
           });
         }
       } else if (user) {
-        // Loading current user's profile
         setDisplayName(user.displayName || "");
         setPhotoURL(user.photoURL || "");
         setEmail(user.email || "");
@@ -89,14 +87,12 @@ const SettingsPage = () => {
     
     setIsSubmitting(true);
     try {
-      // Update in Firestore
       const userRef = doc(db, "users", targetUser.uid);
       await updateDoc(userRef, {
         displayName,
         photoURL
       });
       
-      // Update in Firebase Auth if user is updating their own profile
       if (!isViewingOtherUser && auth.currentUser) {
         await updateProfile(auth.currentUser, {
           displayName,
@@ -409,6 +405,8 @@ const SettingsPage = () => {
               </CardContent>
             </Card>
           )}
+          
+          <LocalizationSettings />
         </div>
       </div>
     </Layout>

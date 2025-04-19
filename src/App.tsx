@@ -1,10 +1,11 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
+import { LanguageProvider } from "./contexts/LanguageContext";
+import { CurrencyProvider } from "./contexts/CurrencyContext";
 import RequireAuth from "./components/auth/RequireAuth";
 import Index from "./pages/Index";
 import ProductsPage from "./pages/ProductsPage";
@@ -22,7 +23,6 @@ const queryClient = new QueryClient();
 
 const App = () => {
   useEffect(() => {
-    // Initialize Firebase app on mount
     import("./lib/firebase").then(() => {
       console.log("Firebase initialized");
     });
@@ -30,29 +30,31 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<AuthPage />} />
-            
-            {/* Protected routes */}
-            <Route path="/" element={<RequireAuth><Index /></RequireAuth>} />
-            <Route path="/products" element={<RequireAuth><ProductsPage /></RequireAuth>} />
-            <Route path="/inventory" element={<RequireAuth><InventoryPage /></RequireAuth>} />
-            <Route path="/orders" element={<RequireAuth><OrdersPage /></RequireAuth>} />
-            <Route path="/activity" element={<RequireAuth><ActivityPage /></RequireAuth>} />
-            <Route path="/users" element={<RequireAuth><UsersPage /></RequireAuth>} />
-            <Route path="/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
-            <Route path="/add-product" element={<RequireAuth><AddProductPage /></RequireAuth>} />
-            <Route path="/scan" element={<RequireAuth><ScanPage /></RequireAuth>} />
-            
-            {/* 404 page */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <LanguageProvider>
+        <CurrencyProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/login" element={<AuthPage />} />
+                
+                <Route path="/" element={<RequireAuth><Index /></RequireAuth>} />
+                <Route path="/products" element={<RequireAuth><ProductsPage /></RequireAuth>} />
+                <Route path="/inventory" element={<RequireAuth><InventoryPage /></RequireAuth>} />
+                <Route path="/orders" element={<RequireAuth><OrdersPage /></RequireAuth>} />
+                <Route path="/activity" element={<RequireAuth><ActivityPage /></RequireAuth>} />
+                <Route path="/users" element={<RequireAuth><UsersPage /></RequireAuth>} />
+                <Route path="/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
+                <Route path="/add-product" element={<RequireAuth><AddProductPage /></RequireAuth>} />
+                <Route path="/scan" element={<RequireAuth><ScanPage /></RequireAuth>} />
+                
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </CurrencyProvider>
+      </LanguageProvider>
     </QueryClientProvider>
   );
 };
