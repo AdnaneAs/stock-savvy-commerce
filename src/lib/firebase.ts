@@ -1,11 +1,10 @@
-
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { 
   createUser, 
   getUserByUid, 
   getAllUsers, 
-  updateUser, 
+  updateUser as dbUpdateUser, 
   inviteUser as dbInviteUser,
   createProduct,
   getProductsByOwnerId,
@@ -113,6 +112,10 @@ const getUserProfile = async (uid) => {
   return getUserByUid(uid);
 };
 
+const updateUser = async (uid, userData) => {
+  return dbUpdateUser(uid, userData);
+};
+
 const inviteUser = async (inviterUid, invitedUserUid) => {
   await dbInviteUser(inviterUid, invitedUserUid);
 };
@@ -144,6 +147,7 @@ export {
   googleProvider, 
   createUserProfile, 
   getUserProfile,
+  updateUser,
   inviteUser,
   addUserProduct,
   getUserProducts,

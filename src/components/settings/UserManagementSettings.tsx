@@ -1,8 +1,6 @@
-
-import { doc, updateDoc } from "firebase/firestore";
-import { db, updateUserRole } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { UserProfile } from "@/components/auth/RequireAuth";
+import { updateUserRole } from "@/lib/firebase";
 import { 
   Card, 
   CardContent, 

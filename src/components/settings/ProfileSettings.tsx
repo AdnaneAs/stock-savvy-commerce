@@ -5,9 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { UserProfile } from "@/components/auth/RequireAuth";
-import { doc, updateDoc } from "firebase/firestore";
 import { updateProfile } from "firebase/auth";
-import { db, auth } from "@/lib/firebase";
+import { auth, updateUser } from "@/lib/firebase";
 import { 
   Card, 
   CardContent, 
@@ -41,12 +40,13 @@ const ProfileSettings = ({ user, isViewingOtherUser, viewingUser }: ProfileSetti
     
     setIsSubmitting(true);
     try {
-      const userRef = doc(db, "users", targetUser.uid);
-      await updateDoc(userRef, {
+      // Update user in our database
+      await updateUser(targetUser.uid, {
         displayName,
         photoURL
       });
       
+      // If updating current user, also update Auth profile
       if (!isViewingOtherUser && auth.currentUser) {
         await updateProfile(auth.currentUser, {
           displayName,
