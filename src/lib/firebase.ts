@@ -1,7 +1,19 @@
 
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
-import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, arrayUnion, query, where, getDocs } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
+import { 
+  createUser, 
+  getUserByUid, 
+  getAllUsers, 
+  updateUser, 
+  inviteUser as dbInviteUser,
+  createProduct,
+  getProductsByOwnerId,
+  getProductById,
+  updateProduct,
+  deleteProduct
+} from "./database";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -16,7 +28,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
+const db = getFirestore(app); // Keep for compatibility
 const googleProvider = new GoogleAuthProvider();
 
 // Check if admin account exists, if not create it
@@ -25,47 +37,46 @@ const initializeAdminAccount = async () => {
     const adminEmail = "admin@admin.com";
     const adminPassword = "admin";
     
-    // Check if user already exists
-    const usersRef = collection(db, "users");
-    const q = query(usersRef, where("email", "==", adminEmail));
-    const querySnapshot = await getDocs(q);
+    // Check if user already exists in the database
+    const adminUser = await getUserByUid("admin-uid");
     
-    if (querySnapshot.empty) {
+    if (!adminUser) {
       try {
-        // Create admin user
+        // Create admin user in Firebase Auth
+        console.log("Creating admin user in Firebase Auth");
         const userCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPassword);
         const user = userCredential.user;
         
-        // Add admin user to Firestore with admin role
-        await setDoc(doc(db, "users", user.uid), {
+        // Add admin user to database with admin role
+        await createUser({
           uid: user.uid,
           email: adminEmail,
           role: "admin",
           displayName: "Admin",
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
           invitedUsers: [],
           products: []
         });
         
         console.log("Admin account created");
       } catch (error: any) {
-        // Admin might already exist in Auth but not in Firestore
+        // Admin might already exist in Auth but not in database
         if (error.code === "auth/email-already-in-use") {
           try {
             // Try to sign in as admin
             const credential = await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
             const adminUser = credential.user;
             
-            // Check if admin exists in Firestore
-            const adminDoc = await getDoc(doc(db, "users", adminUser.uid));
-            if (!adminDoc.exists()) {
+            // Check if admin exists in database
+            const existingAdminUser = await getUserByUid(adminUser.uid);
+            if (!existingAdminUser) {
               // Create admin user profile
-              await setDoc(doc(db, "users", adminUser.uid), {
+              await createUser({
                 uid: adminUser.uid,
                 email: adminEmail,
                 role: "admin",
                 displayName: "Admin",
-                createdAt: new Date(),
+                createdAt: new Date().toISOString(),
                 invitedUsers: [],
                 products: []
               });
@@ -87,82 +98,49 @@ const initializeAdminAccount = async () => {
 };
 
 // Initialize admin account
-initializeAdminAccount();
+initializeAdminAccount().catch(error => {
+  console.error("Error creating admin account:", error);
+});
 
 // Helper functions for user management
 const createUserProfile = async (uid, userData) => {
-  await setDoc(doc(db, "users", uid), {
+  await createUser({
     uid,
     ...userData,
-    role: userData.role || "user",
+    role: userData.role || "worker",
     invitedUsers: userData.invitedUsers || [],
-    products: userData.products || [],
-    createdAt: new Date()
+    createdAt: new Date().toISOString()
   });
 };
 
 const getUserProfile = async (uid) => {
-  const userDoc = await getDoc(doc(db, "users", uid));
-  return userDoc.exists() ? userDoc.data() : null;
+  return getUserByUid(uid);
 };
 
 const inviteUser = async (inviterUid, invitedUserUid) => {
-  await updateDoc(doc(db, "users", inviterUid), {
-    invitedUsers: arrayUnion(invitedUserUid)
-  });
+  await dbInviteUser(inviterUid, invitedUserUid);
 };
 
 // Add product management functions
 const addUserProduct = async (uid, productData) => {
-  const productRef = doc(collection(db, "products"));
-  const productId = productRef.id;
+  const productId = `product-${Date.now()}`;
   
   // Add product with owner information
-  await setDoc(productRef, {
+  await createProduct({
     id: productId,
     ownerId: uid,
     ...productData,
-    createdAt: new Date()
-  });
-  
-  // Add product ID to user's products array
-  await updateDoc(doc(db, "users", uid), {
-    products: arrayUnion(productId)
   });
   
   return productId;
 };
 
 const getUserProducts = async (uid) => {
-  const productsRef = collection(db, "products");
-  const q = query(productsRef, where("ownerId", "==", uid));
-  const querySnapshot = await getDocs(q);
-  
-  const products = [];
-  querySnapshot.forEach((doc) => {
-    products.push(doc.data());
-  });
-  
-  return products;
-};
-
-const getAllUsers = async () => {
-  const usersRef = collection(db, "users");
-  const querySnapshot = await getDocs(usersRef);
-  
-  const users = [];
-  querySnapshot.forEach((doc) => {
-    users.push(doc.data());
-  });
-  
-  return users;
+  return getProductsByOwnerId(uid);
 };
 
 const updateUserRole = async (uid, newRole) => {
-  const userRef = doc(db, "users", uid);
-  await updateDoc(userRef, {
-    role: newRole
-  });
+  await updateUser(uid, { role: newRole });
 };
 
 export { 

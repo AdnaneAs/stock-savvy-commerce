@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { UserProfile } from "@/components/auth/RequireAuth";
+import { Badge } from "@/components/ui/badge";
 
 interface UserSettingsProps {
   user: UserProfile;
@@ -16,6 +17,16 @@ interface UserSettingsProps {
 
 const UserSettings = ({ user }: UserSettingsProps) => {
   const invitedUsers = user?.invitedUsers || [];
+  const role = user?.role || "worker";
+
+  // Determine invitation limit based on role
+  const invitationLimit = role === 'admin' ? '∞' : role === 'owner' ? '5' : '2';
+  const currentInvites = invitedUsers.length;
+  
+  // Determine if user can invite more users
+  const canInvite = role === 'admin' || 
+                   (role === 'owner' && currentInvites < 5) || 
+                   (role === 'worker' && currentInvites < 2);
 
   return (
     <Card>
@@ -24,6 +35,10 @@ const UserSettings = ({ user }: UserSettingsProps) => {
         <CardDescription>Manage your account preferences</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="flex items-center gap-2">
+          <p className="text-sm">Your role:</p>
+          <Badge className="capitalize">{role}</Badge>
+        </div>
         <p className="text-sm text-muted-foreground">
           Customize your account settings and preferences.
         </p>
@@ -48,13 +63,13 @@ const UserSettings = ({ user }: UserSettingsProps) => {
             <div>
               <h3 className="font-medium">User Invitations</h3>
               <p className="text-sm text-muted-foreground">
-                {invitedUsers.length}/2 invitations used
+                {currentInvites}/{invitationLimit} invitations used
               </p>
             </div>
             <Button 
               variant="outline"
               onClick={() => window.location.href = "/users"}
-              disabled={invitedUsers.length >= 2}
+              disabled={!canInvite}
             >
               Invite User
             </Button>

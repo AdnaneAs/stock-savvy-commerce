@@ -14,11 +14,11 @@ export interface UserProfile {
   uid: string;
   email: string;
   displayName?: string;
-  role: "admin" | "user";
+  role: "admin" | "owner" | "worker";
   invitedUsers: string[];
-  products: string[];
+  products?: string[];
   photoURL?: string;
-  createdAt: Date;
+  createdAt: Date | string;
 }
 
 // Create a context to store and access user data globally
@@ -27,10 +27,12 @@ import { createContext, useContext } from "react";
 export const UserContext = createContext<{
   user: UserProfile | null;
   isAdmin: boolean;
+  isOwner: boolean;
   loading: boolean;
 }>({
   user: null,
   isAdmin: false,
+  isOwner: false,
   loading: true
 });
 
@@ -48,7 +50,7 @@ const RequireAuth = ({ children }: RequireAuthProps) => {
         setIsAuthenticated(true);
         
         try {
-          // Fetch user profile from Firestore
+          // Fetch user profile from database
           const userProfile = await getUserProfile(authUser.uid);
           if (userProfile) {
             setUser(userProfile as UserProfile);
@@ -94,6 +96,7 @@ const RequireAuth = ({ children }: RequireAuthProps) => {
     <UserContext.Provider value={{ 
       user, 
       isAdmin: user?.role === "admin",
+      isOwner: user?.role === "owner",
       loading: isLoading 
     }}>
       {children}

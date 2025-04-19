@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Plus, Settings, Shield, UserPlus, UserX, Lock, Key } from "lucide-react";
+import { MoreHorizontal, Plus, Settings, Shield, UserPlus, UserX, Building, Briefcase } from "lucide-react";
 import { useUser } from "@/components/auth/RequireAuth";
 import {
   DropdownMenu,
@@ -13,8 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { db, createUserProfile } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
+import { getAllUsers, updateUserRole } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -23,12 +22,14 @@ import {
   createUserWithEmailAndPassword,
   getAuth
 } from "firebase/auth";
+import { createUserProfile } from "@/lib/firebase";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface User {
   uid: string;
   email: string;
   displayName?: string;
-  role: "admin" | "user";
+  role: "admin" | "owner" | "worker";
   status?: "Active" | "Invited" | "Inactive";
   invitedUsers: string[];
   invitedBy?: string;
@@ -36,25 +37,21 @@ interface User {
 }
 
 const UsersPage = () => {
-  const { user: currentUser, isAdmin } = useUser();
+  const { user: currentUser, isAdmin, isOwner } = useUser();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserName, setNewUserName] = useState("");
+  const [newUserRole, setNewUserRole] = useState<"worker" | "owner">("worker");
   const [isInviting, setIsInviting] = useState(false);
   const { toast } = useToast();
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const usersCol = collection(db, "users");
-      const userSnapshot = await getDocs(usersCol);
-      const userList: User[] = [];
-      userSnapshot.forEach(doc => {
-        userList.push(doc.data() as User);
-      });
-      setUsers(userList);
+      const userList = await getAllUsers();
+      setUsers(userList as User[]);
     } catch (error) {
       console.error("Error fetching users:", error);
       toast({
@@ -76,9 +73,16 @@ const UsersPage = () => {
   const canInviteMoreUsers = () => {
     if (!currentUser) return false;
     if (isAdmin) return true;
+    if (isOwner) return currentUser.invitedUsers?.length < 5;
     
-    // Regular users can only invite up to 2 users
+    // Workers can only invite up to 2 users
     return currentUser.invitedUsers?.length < 2;
+  };
+
+  const getInviteLimit = () => {
+    if (isAdmin) return "∞";
+    if (isOwner) return "5";
+    return "2";
   };
 
   const handleInviteUser = async () => {
@@ -86,7 +90,7 @@ const UsersPage = () => {
       toast({
         variant: "destructive",
         title: "Invitation limit reached",
-        description: "You can only invite up to 2 users. Contact admin for more.",
+        description: `You can only invite up to ${getInviteLimit()} users based on your role.`,
       });
       return;
     }
@@ -103,23 +107,15 @@ const UsersPage = () => {
       
       const newUser = userCredential.user;
 
-      // Create user profile in Firestore
+      // Create user profile
       await createUserProfile(newUser.uid, {
         email: newUserEmail,
         displayName: newUserName || newUserEmail.split("@")[0],
-        role: "user",
+        role: newUserRole,
         invitedBy: currentUser?.uid,
         status: "Active",
         invitedUsers: []
       });
-
-      // Update inviter's invited users list
-      if (currentUser) {
-        const userRef = doc(db, "users", currentUser.uid);
-        await updateDoc(userRef, {
-          invitedUsers: [...(currentUser.invitedUsers || []), newUser.uid]
-        });
-      }
 
       toast({
         title: "User invited successfully",
@@ -130,6 +126,7 @@ const UsersPage = () => {
       setNewUserEmail("");
       setNewUserPassword("");
       setNewUserName("");
+      setNewUserRole("worker");
       fetchUsers();
     } catch (error: any) {
       console.error("Error inviting user:", error);
@@ -143,7 +140,7 @@ const UsersPage = () => {
     }
   };
 
-  const changeUserRole = async (userId: string, newRole: "admin" | "user") => {
+  const changeUserRole = async (userId: string, newRole: "admin" | "owner" | "worker") => {
     if (!isAdmin) {
       toast({
         variant: "destructive",
@@ -154,8 +151,7 @@ const UsersPage = () => {
     }
 
     try {
-      const userRef = doc(db, "users", userId);
-      await updateDoc(userRef, { role: newRole });
+      await updateUserRole(userId, newRole);
       
       toast({
         title: "Role updated",
@@ -173,6 +169,24 @@ const UsersPage = () => {
     }
   };
 
+  const getRoleIcon = (role: string) => {
+    switch(role) {
+      case 'admin': return <Shield className="h-3 w-3" />;
+      case 'owner': return <Building className="h-3 w-3" />;
+      case 'worker': return <Briefcase className="h-3 w-3" />;
+      default: return <Briefcase className="h-3 w-3" />;
+    }
+  };
+
+  const getRoleBadgeVariant = (role: string) => {
+    switch(role) {
+      case 'admin': return "destructive";
+      case 'owner': return "secondary";
+      case 'worker': return "default";
+      default: return "default";
+    }
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -182,7 +196,9 @@ const UsersPage = () => {
             <p className="text-muted-foreground">
               {isAdmin 
                 ? "Manage all user accounts and permissions" 
-                : `You can invite up to 2 users (${currentUser?.invitedUsers?.length || 0}/2 used)`}
+                : isOwner
+                  ? `You can invite up to 5 users (${currentUser?.invitedUsers?.length || 0}/5 used)`
+                  : `You can invite up to 2 users (${currentUser?.invitedUsers?.length || 0}/2 used)`}
             </p>
           </div>
           <Dialog>
@@ -240,6 +256,25 @@ const UsersPage = () => {
                     required
                   />
                 </div>
+                {(isAdmin || isOwner) && (
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="role" className="text-right">
+                      Role
+                    </Label>
+                    <Select 
+                      value={newUserRole}
+                      onValueChange={(value: "worker" | "owner") => setNewUserRole(value)}
+                    >
+                      <SelectTrigger id="role" className="col-span-3">
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="worker">Worker</SelectItem>
+                        {isAdmin && <SelectItem value="owner">Owner</SelectItem>}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button onClick={handleInviteUser} disabled={isInviting}>
@@ -290,13 +325,13 @@ const UsersPage = () => {
                     </TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
-                      <Badge variant={user.role === "admin" ? "destructive" : "default"} className="flex items-center gap-1 w-fit">
-                        {user.role === "admin" && <Shield className="h-3 w-3" />}
-                        {user.role === "admin" ? "Admin" : "User"}
+                      <Badge variant={getRoleBadgeVariant(user.role)} className="flex items-center gap-1 w-fit capitalize">
+                        {getRoleIcon(user.role)}
+                        {user.role}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {user.invitedUsers?.length || 0}/{user.role === "admin" ? "∞" : "2"}
+                      {user.invitedUsers?.length || 0}/{user.role === "admin" ? "∞" : user.role === "owner" ? "5" : "2"}
                     </TableCell>
                     <TableCell className="text-right">
                       {isAdmin && user.uid !== currentUser?.uid && (
@@ -307,19 +342,24 @@ const UsersPage = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => changeUserRole(user.uid, user.role === "admin" ? "user" : "admin")}>
-                              {user.role === "admin" ? (
-                                <>
-                                  <UserX className="mr-2 h-4 w-4" />
-                                  Remove admin role
-                                </>
-                              ) : (
-                                <>
-                                  <Shield className="mr-2 h-4 w-4" />
-                                  Make admin
-                                </>
-                              )}
-                            </DropdownMenuItem>
+                            {user.role !== "admin" && (
+                              <DropdownMenuItem onClick={() => changeUserRole(user.uid, "admin")}>
+                                <Shield className="mr-2 h-4 w-4" />
+                                Make admin
+                              </DropdownMenuItem>
+                            )}
+                            {user.role !== "owner" && user.role !== "admin" && (
+                              <DropdownMenuItem onClick={() => changeUserRole(user.uid, "owner")}>
+                                <Building className="mr-2 h-4 w-4" />
+                                Make owner
+                              </DropdownMenuItem>
+                            )}
+                            {user.role !== "worker" && (
+                              <DropdownMenuItem onClick={() => changeUserRole(user.uid, "worker")}>
+                                <Briefcase className="mr-2 h-4 w-4" />
+                                Make worker
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem onClick={() => {
                               // View user profile
                               window.location.href = `/settings?uid=${user.uid}`;
