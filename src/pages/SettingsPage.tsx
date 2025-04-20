@@ -11,6 +11,7 @@ import AdminSettings from "@/components/settings/AdminSettings";
 import UserManagementSettings from "@/components/settings/UserManagementSettings";
 import UserSettings from "@/components/settings/UserSettings";
 import LocalizationSettings from "@/components/settings/LocalizationSettings";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const SettingsPage = () => {
   const { user, isAdmin } = useUser();
@@ -20,6 +21,7 @@ const SettingsPage = () => {
   const [viewingUser, setViewingUser] = useState<UserProfile | null>(null);
   const [isViewingOtherUser, setIsViewingOtherUser] = useState(false);
   const [role, setRole] = useState("");
+  const [activeTab, setActiveTab] = useState("profile");
 
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -28,7 +30,7 @@ const SettingsPage = () => {
           const otherUserProfile = await getUserProfile(viewingUserId);
           if (otherUserProfile) {
             setViewingUser(otherUserProfile as UserProfile);
-            setRole(otherUserProfile.role || "user");
+            setRole(otherUserProfile.role || "worker");
             setIsViewingOtherUser(true);
           } else {
             toast({
@@ -46,7 +48,7 @@ const SettingsPage = () => {
           });
         }
       } else {
-        setRole(user?.role || "user");
+        setRole(user?.role || "worker");
         setIsViewingOtherUser(false);
       }
     };
@@ -58,7 +60,7 @@ const SettingsPage = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-6 pb-10">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
             {isViewingOtherUser 
@@ -68,31 +70,49 @@ const SettingsPage = () => {
           <p className="text-muted-foreground">
             {isViewingOtherUser 
               ? "Manage user account settings" 
-              : "Manage your account settings"}
+              : "Manage your account settings and preferences"}
           </p>
         </div>
         
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
-          <ProfileSettings 
-            user={user} 
-            isViewingOtherUser={isViewingOtherUser} 
-            viewingUser={viewingUser} 
-          />
-
-          {(isAdmin && !isViewingOtherUser) ? (
-            <AdminSettings />
-          ) : isViewingOtherUser ? (
-            <UserManagementSettings 
-              viewingUser={viewingUser!} 
-              role={role} 
-              setRole={setRole}
-            />
-          ) : (
-            <UserSettings user={user} />
-          )}
+        <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full md:w-auto md:inline-flex grid-cols-3 md:grid-cols-none h-auto md:h-10 mb-6">
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="account">Account</TabsTrigger>
+            <TabsTrigger value="localization">Localization</TabsTrigger>
+          </TabsList>
           
-          <LocalizationSettings />
-        </div>
+          <TabsContent value="profile" className="w-full">
+            <div className="max-w-2xl">
+              <ProfileSettings 
+                user={user} 
+                isViewingOtherUser={isViewingOtherUser} 
+                viewingUser={viewingUser} 
+              />
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="account" className="w-full">
+            <div className="max-w-2xl">
+              {(isAdmin && !isViewingOtherUser) ? (
+                <AdminSettings />
+              ) : isViewingOtherUser ? (
+                <UserManagementSettings 
+                  viewingUser={viewingUser!} 
+                  role={role} 
+                  setRole={setRole}
+                />
+              ) : (
+                <UserSettings user={user} />
+              )}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="localization" className="w-full">
+            <div className="max-w-2xl">
+              <LocalizationSettings />
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </Layout>
   );

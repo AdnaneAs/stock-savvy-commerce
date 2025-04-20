@@ -30,6 +30,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useUser();
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -63,6 +64,12 @@ const Header = ({ onMenuClick }: HeaderProps) => {
     return user.email[0].toUpperCase();
   };
 
+  const sampleNotifications = [
+    { id: 1, message: "Low stock alert: USB Flash Drive 32GB", time: "10 min ago", unread: true },
+    { id: 2, message: "New order received", time: "1 hour ago", unread: true },
+    { id: 3, message: "Inventory update completed", time: "3 hours ago", unread: false },
+  ];
+
   return (
     <header className="bg-white border-b border-gray-200 h-16 flex items-center px-4 sticky top-0 z-30 shadow-sm">
       <div className="flex items-center w-full gap-4">
@@ -88,10 +95,37 @@ const Header = ({ onMenuClick }: HeaderProps) => {
         </div>
 
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="relative hover:bg-gray-100 transition-colors">
-            <Bell size={20} />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-          </Button>
+          <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative hover:bg-gray-100 transition-colors">
+                <Bell size={20} />
+                {sampleNotifications.filter(n => n.unread).length > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-80" align="end">
+              <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {sampleNotifications.map((notification) => (
+                <DropdownMenuItem key={notification.id} className="flex items-start py-3 px-4 cursor-pointer">
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <p className={`text-sm font-medium ${notification.unread ? "text-primary" : ""}`}>{notification.message}</p>
+                      {notification.unread && (
+                        <span className="h-2 w-2 bg-primary rounded-full"></span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{notification.time}</p>
+                  </div>
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-center text-primary text-sm font-medium cursor-pointer justify-center">
+                View all notifications
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

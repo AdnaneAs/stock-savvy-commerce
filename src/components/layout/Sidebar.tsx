@@ -3,9 +3,8 @@ import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   BarChart3,
-  Boxes,
-  ClipboardList,
   Package,
+  ClipboardList,
   Settings,
   Users,
   Activity,
@@ -60,9 +59,8 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
   const items = [
     { icon: <Home size={20} />, label: "Dashboard", href: "/" },
-    { icon: <Boxes size={20} />, label: "Inventory", href: "/inventory" },
-    { icon: <Barcode size={20} />, label: "Scan Products", href: "/scan" },
     { icon: <Package size={20} />, label: "Products", href: "/products" },
+    { icon: <Barcode size={20} />, label: "Scan Products", href: "/scan" },
     { icon: <ClipboardList size={20} />, label: "Orders", href: "/orders" },
     { icon: <Activity size={20} />, label: "Activity", href: "/activity" },
     { icon: <BarChart3 size={20} />, label: "Reports", href: "/reports" },
@@ -80,7 +78,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       isMobile ? "fixed inset-y-0 left-0 z-50 w-64" : "w-64"
     )}>
       <div className="flex items-center gap-2 px-3 h-14">
-        <Boxes size={28} className="text-sidebar-accent" />
+        <Package size={28} className="text-sidebar-accent" />
         <span className="font-bold text-xl text-sidebar-foreground">StockSavvy</span>
       </div>
 
