@@ -1,4 +1,3 @@
-
 // Using IndexedDB for browser environment instead of SQLite
 // This provides similar functionality but works in browsers
 
@@ -36,7 +35,7 @@ const db = {
   products: [] as Product[]
 };
 
-// Initialize with admin user
+// Initialize with admin user and sample products
 export const initDatabase = async () => {
   // Only add admin if not already exists
   if (!db.users.find(user => user.uid === 'admin-uid')) {
@@ -49,7 +48,58 @@ export const initDatabase = async () => {
       invitedUsers: [],
       createdAt: new Date().toISOString()
     });
-    console.log('Admin user initialized');
+    
+    // Add sample products for the admin user
+    const sampleProducts = [
+      {
+        id: 'prod-1',
+        ownerId: 'admin-uid',
+        name: 'USB Flash Drive 32GB',
+        description: 'High-speed USB 3.0 flash drive',
+        price: 12.99,
+        stock: 142,
+        category: 'Electronics',
+        barcode: '8574635284163',
+        sku: 'USB-32GB',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'prod-2',
+        ownerId: 'admin-uid',
+        name: 'Wireless Mouse',
+        description: 'Ergonomic wireless mouse with long battery life',
+        price: 24.99,
+        stock: 78,
+        category: 'Electronics',
+        barcode: '7485963210584',
+        sku: 'WM-001',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'prod-3',
+        ownerId: 'admin-uid',
+        name: 'Office Chair',
+        description: 'Adjustable office chair with lumbar support',
+        price: 149.99,
+        stock: 14,
+        category: 'Furniture',
+        barcode: '9685741023695',
+        sku: 'OC-deluxe',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+    ];
+
+    // Add sample products to database
+    sampleProducts.forEach(product => {
+      db.products.push(product);
+    });
+    
+    console.log('Admin user and sample products initialized');
+  } else {
+    console.log('Admin account already exists');
   }
 };
 

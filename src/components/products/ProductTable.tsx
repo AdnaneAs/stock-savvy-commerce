@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Table,
   TableBody,
@@ -20,84 +20,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, ArrowUpDown, Search, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { getUserProducts, deleteProduct } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
+import { Product } from "@/lib/database";
 
-interface Product {
-  id: string;
-  name: string;
-  barcode: string;
-  category: string;
-  stock: number;
-  price: number;
-  status: "In Stock" | "Low Stock" | "Out of Stock";
-}
+const getStatusFromStock = (stock: number): "In Stock" | "Low Stock" | "Out of Stock" => {
+  if (stock === 0) return "Out of Stock";
+  if (stock < 10) return "Low Stock";
+  return "In Stock";
+};
 
-const products: Product[] = [
-  {
-    id: "PRD001",
-    name: "USB Flash Drive 32GB",
-    barcode: "8574635284163",
-    category: "Electronics",
-    stock: 142,
-    price: 12.99,
-    status: "In Stock",
-  },
-  {
-    id: "PRD002",
-    name: "Wireless Mouse",
-    barcode: "7485963210584",
-    category: "Electronics",
-    stock: 78,
-    price: 24.99,
-    status: "In Stock",
-  },
-  {
-    id: "PRD003",
-    name: "Office Chair",
-    barcode: "9685741023695",
-    category: "Furniture",
-    stock: 14,
-    price: 149.99,
-    status: "Low Stock",
-  },
-  {
-    id: "PRD004",
-    name: "Printer Ink Cartridge",
-    barcode: "6574839201758",
-    category: "Office Supplies",
-    stock: 0,
-    price: 34.99,
-    status: "Out of Stock",
-  },
-  {
-    id: "PRD005",
-    name: "Document Folder Pack",
-    barcode: "3214587960325",
-    category: "Office Supplies",
-    stock: 57,
-    price: 8.99,
-    status: "In Stock",
-  },
-  {
-    id: "PRD006",
-    name: "24\" Monitor",
-    barcode: "1478523690587",
-    category: "Electronics",
-    stock: 3,
-    price: 199.99,
-    status: "Low Stock",
-  },
-  {
-    id: "PRD007",
-    name: "Standing Desk",
-    barcode: "9517538462058",
-    category: "Furniture",
-    stock: 8,
-    price: 299.99,
-    status: "Low Stock",
-  },
-];
-
-const getStatusColor = (status: Product["status"]) => {
+const getStatusColor = (status: "In Stock" | "Low Stock" | "Out of Stock") => {
   switch (status) {
     case "In Stock":
       return "bg-green-100 text-green-800 hover:bg-green-100";
@@ -111,9 +45,19 @@ const getStatusColor = (status: Product["status"]) => {
 };
 
 const ProductTable = () => {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<keyof Product | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const { data: products = [], isLoading, refetch } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      const user = auth.currentUser;
+      if (!user) return [];
+      return getUserProducts(user.uid);
+    }
+  });
 
   const handleSort = (field: keyof Product) => {
     if (sortField === field) {
@@ -124,19 +68,39 @@ const ProductTable = () => {
     }
   };
 
-  const sortedProducts = [...products]
-    .filter((product) =>
+  const handleDelete = async (productId: string) => {
+    try {
+      await deleteProduct(productId);
+      await refetch();
+      toast({
+        title: "Product deleted",
+        description: "The product has been successfully deleted.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete the product.",
+      });
+    }
+  };
+
+  const filteredProducts = products
+    .filter((product: Product) =>
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.barcode.includes(searchQuery) ||
-      product.category.toLowerCase().includes(searchQuery.toLowerCase())
+      product.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.barcode?.includes(searchQuery)
     )
-    .sort((a, b) => {
+    .sort((a: Product, b: Product) => {
       if (!sortField) return 0;
       
+      const aValue = a[sortField];
+      const bValue = b[sortField];
+      
       if (sortDirection === "asc") {
-        return a[sortField] > b[sortField] ? 1 : -1;
+        return aValue > bValue ? 1 : -1;
       } else {
-        return a[sortField] < b[sortField] ? 1 : -1;
+        return aValue < bValue ? 1 : -1;
       }
     });
 
@@ -155,11 +119,6 @@ const ProductTable = () => {
           </div>
           <Button variant="outline" size="icon">
             <Filter className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="default">
-            Add Product
           </Button>
         </div>
       </div>
@@ -214,12 +173,18 @@ const ProductTable = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedProducts.length > 0 ? (
-              sortedProducts.map((product) => (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-24 text-center">
+                  Loading products...
+                </TableCell>
+              </TableRow>
+            ) : filteredProducts.length > 0 ? (
+              filteredProducts.map((product: Product) => (
                 <TableRow key={product.id}>
                   <TableCell className="font-medium">{product.name}</TableCell>
-                  <TableCell className="font-mono text-sm">{product.barcode}</TableCell>
-                  <TableCell>{product.category}</TableCell>
+                  <TableCell className="font-mono text-sm">{product.barcode || 'N/A'}</TableCell>
+                  <TableCell>{product.category || 'Uncategorized'}</TableCell>
                   <TableCell className="text-right">
                     ${product.price.toFixed(2)}
                   </TableCell>
@@ -227,9 +192,9 @@ const ProductTable = () => {
                   <TableCell>
                     <Badge
                       variant="outline"
-                      className={getStatusColor(product.status)}
+                      className={getStatusColor(getStatusFromStock(product.stock))}
                     >
-                      {product.status}
+                      {getStatusFromStock(product.stock)}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -245,7 +210,12 @@ const ProductTable = () => {
                         <DropdownMenuItem>Edit</DropdownMenuItem>
                         <DropdownMenuItem>View history</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="text-red-600"
+                          onClick={() => handleDelete(product.id)}
+                        >
+                          Delete
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
