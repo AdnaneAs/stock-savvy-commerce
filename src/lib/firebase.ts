@@ -1,3 +1,4 @@
+
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { 
@@ -10,7 +11,7 @@ import {
   getProductsByOwnerId,
   getProductById,
   updateProduct,
-  deleteProduct
+  deleteProduct as dbDeleteProduct
 } from "./database";
 
 // Your web app's Firebase configuration
@@ -142,6 +143,11 @@ const updateUserRole = async (uid, newRole) => {
   await updateUser(uid, { role: newRole });
 };
 
+// Add the missing deleteProduct export
+const deleteProduct = async (productId) => {
+  return dbDeleteProduct(productId);
+};
+
 export { 
   auth, 
   googleProvider, 
@@ -152,5 +158,6 @@ export {
   addUserProduct,
   getUserProducts,
   getAllUsers,
-  updateUserRole
+  updateUserRole,
+  deleteProduct  // Export the deleteProduct function
 };
