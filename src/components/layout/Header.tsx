@@ -33,6 +33,13 @@ interface HeaderProps {
   onMenuClick: () => void;
 }
 
+interface Notification {
+  id: number;
+  message: string;
+  time: string;
+  unread: boolean;
+}
+
 const Header = ({ onMenuClick }: HeaderProps) => {
   const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
@@ -41,11 +48,14 @@ const Header = ({ onMenuClick }: HeaderProps) => {
   const { user } = useUser();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
-  const [selectedNotification, setSelectedNotification] = useState<null | {
-    message: string;
-    time: string;
-  }>(null);
+  const [selectedNotification, setSelectedNotification] = useState<null | Notification>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  
+  const [notifications, setNotifications] = useState<Notification[]>([
+    { id: 1, message: "Low stock alert: USB Flash Drive 32GB", time: "10 min ago", unread: true },
+    { id: 2, message: "New order received", time: "1 hour ago", unread: true },
+    { id: 3, message: "Inventory update completed", time: "3 hours ago", unread: false },
+  ]);
 
   const handleLogout = async () => {
     try {
@@ -79,16 +89,22 @@ const Header = ({ onMenuClick }: HeaderProps) => {
     return user.email[0].toUpperCase();
   };
 
-  const sampleNotifications = [
-    { id: 1, message: "Low stock alert: USB Flash Drive 32GB", time: "10 min ago", unread: true },
-    { id: 2, message: "New order received", time: "1 hour ago", unread: true },
-    { id: 3, message: "Inventory update completed", time: "3 hours ago", unread: false },
-  ];
-
-  const handleNotificationClick = (notification) => {
+  const handleNotificationClick = (notification: Notification) => {
+    // Mark the notification as read
+    setNotifications(prev => 
+      prev.map(n => 
+        n.id === notification.id 
+          ? { ...n, unread: false } 
+          : n
+      )
+    );
+    
+    // Set the selected notification for the dialog
     setSelectedNotification(notification);
     setDialogOpen(true);
   };
+
+  const unreadCount = notifications.filter(n => n.unread).length;
 
   return (
     <header className="bg-white border-b border-gray-200 h-16 flex items-center px-4 sticky top-0 z-30 shadow-sm">
@@ -119,7 +135,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative hover:bg-gray-100 transition-colors">
                 <Bell size={20} />
-                {sampleNotifications.filter(n => n.unread).length > 0 && (
+                {unreadCount > 0 && (
                   <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
                 )}
               </Button>
@@ -127,7 +143,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
             <DropdownMenuContent className="w-80" align="end">
               <DropdownMenuLabel>Notifications</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {sampleNotifications.map((notification) => (
+              {notifications.map((notification) => (
                 <DropdownMenuItem 
                   key={notification.id} 
                   className="flex items-start py-3 px-4 cursor-pointer"
@@ -135,7 +151,9 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                 >
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
-                      <p className={`text-sm font-medium ${notification.unread ? "text-primary" : ""}`}>{notification.message}</p>
+                      <p className={`text-sm font-medium ${notification.unread ? "text-primary" : ""}`}>
+                        {notification.message}
+                      </p>
                       {notification.unread && (
                         <span className="h-2 w-2 bg-primary rounded-full"></span>
                       )}

@@ -20,7 +20,7 @@ const SettingsPage = () => {
   const viewingUserId = searchParams.get("uid");
   const [viewingUser, setViewingUser] = useState<UserProfile | null>(null);
   const [isViewingOtherUser, setIsViewingOtherUser] = useState(false);
-  const [role, setRole] = useState("");
+  const [role, setRole] = useState("worker");
   const [activeTab, setActiveTab] = useState("profile");
 
   useEffect(() => {
@@ -53,7 +53,9 @@ const SettingsPage = () => {
       }
     };
 
-    loadUserProfile();
+    if (user) {
+      loadUserProfile();
+    }
   }, [user, viewingUserId, isAdmin, toast]);
 
   if (!user) return null;
@@ -74,7 +76,7 @@ const SettingsPage = () => {
           </p>
         </div>
         
-        <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs defaultValue={activeTab} className="w-full">
           <TabsList className="grid w-full md:w-auto md:inline-flex grid-cols-3 md:grid-cols-none h-auto md:h-10 mb-6">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="account">Account</TabsTrigger>
