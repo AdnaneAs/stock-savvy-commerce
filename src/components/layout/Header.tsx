@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useUser } from "@/components/auth/RequireAuth";
+import { useNotifications, Notification } from "@/contexts/NotificationContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,13 +34,6 @@ interface HeaderProps {
   onMenuClick: () => void;
 }
 
-interface Notification {
-  id: number;
-  message: string;
-  time: string;
-  unread: boolean;
-}
-
 const Header = ({ onMenuClick }: HeaderProps) => {
   const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
@@ -47,15 +41,12 @@ const Header = ({ onMenuClick }: HeaderProps) => {
   const { toast } = useToast();
   const { user } = useUser();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const { notifications, markAsRead } = useNotifications();
 
   const [selectedNotification, setSelectedNotification] = useState<null | Notification>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   
-  const [notifications, setNotifications] = useState<Notification[]>([
-    { id: 1, message: "Low stock alert: USB Flash Drive 32GB", time: "10 min ago", unread: true },
-    { id: 2, message: "New order received", time: "1 hour ago", unread: true },
-    { id: 3, message: "Inventory update completed", time: "3 hours ago", unread: false },
-  ]);
+  const unreadCount = notifications.filter(n => n.unread).length;
 
   const handleLogout = async () => {
     try {
@@ -91,20 +82,12 @@ const Header = ({ onMenuClick }: HeaderProps) => {
 
   const handleNotificationClick = (notification: Notification) => {
     // Mark the notification as read
-    setNotifications(prev => 
-      prev.map(n => 
-        n.id === notification.id 
-          ? { ...n, unread: false } 
-          : n
-      )
-    );
+    markAsRead(notification.id);
     
     // Set the selected notification for the dialog
     setSelectedNotification(notification);
     setDialogOpen(true);
   };
-
-  const unreadCount = notifications.filter(n => n.unread).length;
 
   return (
     <header className="bg-white border-b border-gray-200 h-16 flex items-center px-4 sticky top-0 z-30 shadow-sm">

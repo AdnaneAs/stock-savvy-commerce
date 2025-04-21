@@ -60,6 +60,10 @@ const SettingsPage = () => {
 
   if (!user) return null;
 
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
+
   return (
     <Layout>
       <div className="space-y-6 pb-10">
@@ -76,7 +80,7 @@ const SettingsPage = () => {
           </p>
         </div>
         
-        <Tabs defaultValue={activeTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full md:w-auto md:inline-flex grid-cols-3 md:grid-cols-none h-auto md:h-10 mb-6">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="account">Account</TabsTrigger>
