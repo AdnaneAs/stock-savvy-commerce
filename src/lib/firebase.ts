@@ -1,6 +1,11 @@
-
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  onAuthStateChanged 
+} from "firebase/auth";
 import { 
   createUser, 
   getUserByUid, 
@@ -148,6 +153,28 @@ const deleteProduct = async (productId) => {
   return dbDeleteProduct(productId);
 };
 
+// Add auth state observer
+let currentUser = null;
+
+onAuthStateChanged(auth, (user) => {
+  currentUser = user;
+  if (user) {
+    console.log('User is signed in:', user.uid);
+  } else {
+    console.log('User is signed out');
+  }
+});
+
+// Function to get current user
+const getCurrentUser = () => {
+  return auth.currentUser || currentUser;
+};
+
+// Function to check if user is authenticated
+const isAuthenticated = () => {
+  return !!getCurrentUser();
+};
+
 export { 
   auth, 
   googleProvider, 
@@ -159,5 +186,7 @@ export {
   getUserProducts,
   getAllUsers,
   updateUserRole,
-  deleteProduct  // Export the deleteProduct function
+  deleteProduct,
+  getCurrentUser,  // Export the current user function
+  isAuthenticated  // Export authentication check function
 };
