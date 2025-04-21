@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,6 +18,7 @@ import ScanPage from "./pages/ScanPage";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 import ReportsPage from "./pages/ReportsPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +39,7 @@ const App = () => {
             <BrowserRouter>
               <Routes>
                 <Route path="/login" element={<AuthPage />} />
+                <Route path="/verify-email" element={<VerifyEmailPage />} />
                 
                 <Route path="/" element={<RequireAuth><Index /></RequireAuth>} />
                 <Route path="/products" element={<RequireAuth><ProductsPage /></RequireAuth>} />

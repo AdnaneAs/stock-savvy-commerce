@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Boxes } from "lucide-react";
@@ -10,7 +11,8 @@ import {
   signInWithEmailAndPassword, 
   signInWithPopup, 
   onAuthStateChanged,
-  createUserWithEmailAndPassword
+  createUserWithEmailAndPassword,
+  sendEmailVerification
 } from "firebase/auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -26,7 +28,7 @@ const AuthPage = () => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         localStorage.setItem("isAuthenticated", "true");
-        navigate("/");
+        // navigate("/"); // Don't auto-redirect if on the verify email page!
       }
     });
     
@@ -62,7 +64,9 @@ const AuthPage = () => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      
+
+      await sendEmailVerification(user);
+
       // Create user profile in Firestore
       await createUserProfile(user.uid, {
         email,
@@ -73,9 +77,9 @@ const AuthPage = () => {
       localStorage.setItem("isAuthenticated", "true");
       toast({
         title: "Account created successfully",
-        description: "Welcome to StockSavvy",
+        description: "Please verify your email address.",
       });
-      navigate("/");
+      navigate("/verify-email"); // Go to verify email page!
     } catch (error: any) {
       let errorMessage = "An error occurred during sign up";
       if (error.code === "auth/email-already-in-use") {
@@ -99,8 +103,6 @@ const AuthPage = () => {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
       
-      // Check if the user's metadata indicates a new user
-      // This is safer than using _tokenResponse which is causing the error
       const isNewUser = user.metadata.creationTime === user.metadata.lastSignInTime;
       
       if (isNewUser) {
@@ -310,3 +312,4 @@ const AuthPage = () => {
 };
 
 export default AuthPage;
+// ... remind user AuthPage.tsx is now very long
