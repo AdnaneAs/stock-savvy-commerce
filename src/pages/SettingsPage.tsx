@@ -89,8 +89,11 @@ const SettingsPage = () => {
   if (userLoading || loading) {
     return (
       <Layout>
-        <div className="h-full flex items-center justify-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <div className="h-full flex items-center justify-center min-h-[70vh] animate-pulse">
+          <div className="text-center">
+            <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground font-medium">Loading settings...</p>
+          </div>
         </div>
       </Layout>
     );
@@ -100,11 +103,11 @@ const SettingsPage = () => {
   if (error) {
     return (
       <Layout>
-        <div className="h-full flex flex-col items-center justify-center">
-          <Alert variant="destructive" className="max-w-md">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error Loading Settings</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
+        <div className="h-full flex flex-col items-center justify-center min-h-[60vh]">
+          <Alert variant="destructive" className="max-w-md shadow-lg border-2 border-destructive/20 animate-in fade-in duration-300">
+            <AlertCircle className="h-6 w-6" />
+            <AlertTitle className="text-lg font-semibold">Error Loading Settings</AlertTitle>
+            <AlertDescription className="mt-2">{error}</AlertDescription>
           </Alert>
         </div>
       </Layout>
@@ -132,58 +135,85 @@ const SettingsPage = () => {
 
   return (
     <Layout>
-      <div className="space-y-6 pb-10">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+      <div className="space-y-8 pb-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 transition-all duration-300 ease-in-out">
+        {/* Enhanced header with gradient and backdrop blur */}
+        <div className="bg-background/60 backdrop-blur-sm p-6 rounded-lg border shadow-sm">
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
             {isViewingOtherUser 
               ? `User Settings: ${viewingUser?.displayName || viewingUser?.email}` 
               : "Settings"}
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mt-2">
             {isViewingOtherUser 
               ? "Manage user account settings" 
               : "Manage your account settings and preferences"}
           </p>
         </div>
         
-        <Tabs defaultValue={activeTab} value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full md:w-auto md:inline-flex grid-cols-3 md:grid-cols-none h-auto md:h-10 mb-6">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="account">Account</TabsTrigger>
-            <TabsTrigger value="localization">Localization</TabsTrigger>
-          </TabsList>
+        {/* Improved tabs with transition effects */}
+        <Tabs 
+          defaultValue={activeTab} 
+          value={activeTab} 
+          onValueChange={handleTabChange} 
+          className="w-full"
+        >
+          <div className="bg-muted/40 backdrop-blur-sm p-2 rounded-lg mb-6 inline-block">
+            <TabsList className="grid w-full md:w-auto md:inline-flex grid-cols-3 md:grid-cols-none h-auto md:h-12 gap-1">
+              <TabsTrigger 
+                value="profile" 
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2 transition-all"
+              >
+                Profile
+              </TabsTrigger>
+              <TabsTrigger 
+                value="account" 
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2 transition-all"
+              >
+                Account
+              </TabsTrigger>
+              <TabsTrigger 
+                value="localization" 
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2 transition-all"
+              >
+                Localization
+              </TabsTrigger>
+            </TabsList>
+          </div>
           
-          <TabsContent value="profile" className="space-y-4 w-full">
-            <div className="max-w-2xl">
-              <ProfileSettings 
-                user={user} 
-                isViewingOtherUser={isViewingOtherUser} 
-                viewingUser={viewingUser} 
-              />
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="account" className="space-y-4 w-full">
-            <div className="max-w-2xl">
-              {(isAdmin && !isViewingOtherUser) ? (
-                <AdminSettings />
-              ) : isViewingOtherUser ? (
-                <UserManagementSettings 
-                  viewingUser={viewingUser!} 
-                  role={role} 
-                  setRole={setRole}
+          {/* Card-style container for settings content */}
+          <div className="bg-card rounded-lg shadow-sm border p-6 animate-in slide-in-from-bottom-2 duration-300">
+            <TabsContent value="profile" className="space-y-6 w-full mt-0">
+              <div className="max-w-3xl mx-auto">
+                <ProfileSettings 
+                  user={user} 
+                  isViewingOtherUser={isViewingOtherUser} 
+                  viewingUser={viewingUser} 
                 />
-              ) : (
-                <UserSettings user={user} />
-              )}
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="localization" className="space-y-4 w-full">
-            <div className="max-w-2xl">
-              <LocalizationSettings />
-            </div>
-          </TabsContent>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="account" className="space-y-6 w-full mt-0">
+              <div className="max-w-3xl mx-auto">
+                {(isAdmin && !isViewingOtherUser) ? (
+                  <AdminSettings />
+                ) : isViewingOtherUser ? (
+                  <UserManagementSettings 
+                    viewingUser={viewingUser!} 
+                    role={role} 
+                    setRole={setRole}
+                  />
+                ) : (
+                  <UserSettings user={user} />
+                )}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="localization" className="space-y-6 w-full mt-0">
+              <div className="max-w-3xl mx-auto">
+                <LocalizationSettings />
+              </div>
+            </TabsContent>
+          </div>
         </Tabs>
       </div>
     </Layout>
