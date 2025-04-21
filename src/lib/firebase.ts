@@ -6,6 +6,7 @@ import {
   signInWithEmailAndPassword, 
   onAuthStateChanged 
 } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 import { 
   createUser, 
   getUserByUid, 
@@ -33,6 +34,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
+const db = getFirestore(app);
 
 // Check if admin account exists, if not create it
 const initializeAdminAccount = async () => {
@@ -177,7 +179,8 @@ const isAuthenticated = () => {
 
 export { 
   auth, 
-  googleProvider, 
+  googleProvider,
+  db,  // Export the Firestore database instance
   createUserProfile, 
   getUserProfile,
   updateUser,
@@ -187,6 +190,6 @@ export {
   getAllUsers,
   updateUserRole,
   deleteProduct,
-  getCurrentUser,  // Export the current user function
-  isAuthenticated  // Export authentication check function
+  getCurrentUser,
+  isAuthenticated
 };
