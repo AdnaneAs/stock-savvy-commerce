@@ -29,11 +29,13 @@ export const UserContext = createContext<{
   isAdmin: boolean;
   isOwner: boolean;
   loading: boolean;
+  firebaseInitialized: boolean;
 }>({
   user: null,
   isAdmin: false,
   isOwner: false,
-  loading: true
+  loading: true,
+  firebaseInitialized: false
 });
 
 export const useUser = () => useContext(UserContext);
@@ -42,10 +44,19 @@ const RequireAuth = ({ children }: RequireAuthProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [firebaseInitialized, setFirebaseInitialized] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
+    const firebasePromise = import("../../lib/firebase").then(() => {
+      console.log("Firebase initialized in RequireAuth");
+      setFirebaseInitialized(true);
+    });
+    
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      // Ensure Firebase is initialized before proceeding
+      await firebasePromise;
+      
       if (authUser) {
         setIsAuthenticated(true);
         
@@ -97,7 +108,8 @@ const RequireAuth = ({ children }: RequireAuthProps) => {
       user, 
       isAdmin: user?.role === "admin",
       isOwner: user?.role === "owner",
-      loading: isLoading 
+      loading: isLoading,
+      firebaseInitialized
     }}>
       {children}
     </UserContext.Provider>

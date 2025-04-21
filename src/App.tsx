@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { CurrencyProvider } from "./contexts/CurrencyContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
@@ -21,15 +21,27 @@ import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 import ReportsPage from "./pages/ReportsPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
+import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
 
 const App = () => {
+  const [firebaseReady, setFirebaseReady] = useState(false);
+
   useEffect(() => {
     import("./lib/firebase").then(() => {
-      console.log("Firebase initialized");
+      console.log("Firebase initialized in App");
+      setFirebaseReady(true);
     });
   }, []);
+
+  if (!firebaseReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

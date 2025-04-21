@@ -14,6 +14,8 @@ interface NotificationContextType {
   markAllAsRead: () => void;
   addNotification: (notification: Omit<Notification, 'id'>) => void;
   clearNotifications: () => void;
+  unreadCount: number;
+  showNotificationDetails: (id: number) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -37,6 +39,11 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
           { id: 3, message: "Inventory update completed", time: "3 hours ago", unread: false },
         ];
   });
+
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+
+  // Calculate unread count
+  const unreadCount = notifications.filter(notification => notification.unread).length;
 
   // Save notifications to localStorage whenever they change
   useEffect(() => {
@@ -73,6 +80,19 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
   const clearNotifications = () => {
     setNotifications([]);
   };
+  
+  const showNotificationDetails = (id: number) => {
+    // Mark notification as read
+    markAsRead(id);
+    
+    // Find the notification to show details
+    const notification = notifications.find(n => n.id === id);
+    
+    if (notification) {
+      setSelectedNotification(notification);
+      // Implement any other logic needed when showing notification details
+    }
+  };
 
   return (
     <NotificationContext.Provider value={{
@@ -80,7 +100,9 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
       markAsRead,
       markAllAsRead,
       addNotification,
-      clearNotifications
+      clearNotifications,
+      unreadCount,
+      showNotificationDetails
     }}>
       {children}
     </NotificationContext.Provider>
