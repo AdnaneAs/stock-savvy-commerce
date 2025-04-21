@@ -12,9 +12,10 @@ import UserManagementSettings from "@/components/settings/UserManagementSettings
 import UserSettings from "@/components/settings/UserSettings";
 import LocalizationSettings from "@/components/settings/LocalizationSettings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2 } from "lucide-react";
 
 const SettingsPage = () => {
-  const { user, isAdmin } = useUser();
+  const { user, isAdmin, loading: userLoading } = useUser();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const viewingUserId = searchParams.get("uid");
@@ -22,22 +23,30 @@ const SettingsPage = () => {
   const [isViewingOtherUser, setIsViewingOtherUser] = useState(false);
   const [role, setRole] = useState("worker");
   const [activeTab, setActiveTab] = useState("profile");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadUserProfile = async () => {
-      if (viewingUserId && isAdmin && viewingUserId !== user?.uid) {
+      if (!userLoading && user) {
         try {
-          const otherUserProfile = await getUserProfile(viewingUserId);
-          if (otherUserProfile) {
-            setViewingUser(otherUserProfile as UserProfile);
-            setRole(otherUserProfile.role || "worker");
-            setIsViewingOtherUser(true);
+          if (viewingUserId && isAdmin && viewingUserId !== user?.uid) {
+            const otherUserProfile = await getUserProfile(viewingUserId);
+            if (otherUserProfile) {
+              setViewingUser(otherUserProfile as UserProfile);
+              setRole(otherUserProfile.role || "worker");
+              setIsViewingOtherUser(true);
+            } else {
+              toast({
+                variant: "destructive",
+                title: "User not found",
+                description: "The requested user profile could not be found",
+              });
+              setError("User profile not found");
+            }
           } else {
-            toast({
-              variant: "destructive",
-              title: "User not found",
-              description: "The requested user profile could not be found",
-            });
+            setRole(user?.role || "worker");
+            setIsViewingOtherUser(false);
           }
         } catch (error) {
           console.error("Error loading user profile:", error);
@@ -46,19 +55,41 @@ const SettingsPage = () => {
             title: "Error loading profile",
             description: "There was a problem loading the user profile",
           });
+          setError("Error loading user profile");
+        } finally {
+          setLoading(false);
         }
-      } else {
-        setRole(user?.role || "worker");
-        setIsViewingOtherUser(false);
+      } else if (!userLoading && !user) {
+        setLoading(false);
+        setError("You need to be logged in to view settings");
       }
     };
 
-    if (user) {
-      loadUserProfile();
-    }
-  }, [user, viewingUserId, isAdmin, toast]);
+    loadUserProfile();
+  }, [user, viewingUserId, isAdmin, toast, userLoading]);
 
-  if (!user) return null;
+  // Render loading state while user authentication is being checked
+  if (userLoading || loading) {
+    return (
+      <Layout>
+        <div className="h-full flex items-center justify-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      </Layout>
+    );
+  }
+
+  // Display error if there is one
+  if (error || !user) {
+    return (
+      <Layout>
+        <div className="h-full flex flex-col items-center justify-center">
+          <h2 className="text-2xl font-bold text-destructive mb-2">Error Loading Settings</h2>
+          <p className="text-muted-foreground">{error || "Authentication required"}</p>
+        </div>
+      </Layout>
+    );
+  }
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
@@ -80,14 +111,14 @@ const SettingsPage = () => {
           </p>
         </div>
         
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <Tabs defaultValue={activeTab} value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full md:w-auto md:inline-flex grid-cols-3 md:grid-cols-none h-auto md:h-10 mb-6">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="localization">Localization</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="profile" className="w-full">
+          <TabsContent value="profile" className="space-y-4 w-full">
             <div className="max-w-2xl">
               <ProfileSettings 
                 user={user} 
@@ -97,7 +128,7 @@ const SettingsPage = () => {
             </div>
           </TabsContent>
           
-          <TabsContent value="account" className="w-full">
+          <TabsContent value="account" className="space-y-4 w-full">
             <div className="max-w-2xl">
               {(isAdmin && !isViewingOtherUser) ? (
                 <AdminSettings />
@@ -113,7 +144,7 @@ const SettingsPage = () => {
             </div>
           </TabsContent>
           
-          <TabsContent value="localization" className="w-full">
+          <TabsContent value="localization" className="space-y-4 w-full">
             <div className="max-w-2xl">
               <LocalizationSettings />
             </div>
