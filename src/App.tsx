@@ -21,6 +21,7 @@ import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 import ReportsPage from "./pages/ReportsPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
+import Profile from "./pages/Profile";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient({
@@ -71,7 +72,7 @@ const App = () => {
                 <Routes>
                   <Route path="/login" element={<AuthPage />} />
                   <Route path="/verify-email" element={<VerifyEmailPage />} />
-                  
+                  <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
                   <Route path="/" element={<RequireAuth><Index /></RequireAuth>} />
                   <Route path="/products" element={<RequireAuth><ProductsPage /></RequireAuth>} />
                   <Route path="/orders" element={<RequireAuth><OrdersPage /></RequireAuth>} />

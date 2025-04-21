@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Shield, User } from "lucide-react";
+import { Shield, User } from "lucide-react";  
 
 interface ProfileSettingsProps {
   user: UserProfile;
