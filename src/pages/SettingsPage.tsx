@@ -12,7 +12,8 @@ import UserManagementSettings from "@/components/settings/UserManagementSettings
 import UserSettings from "@/components/settings/UserSettings";
 import LocalizationSettings from "@/components/settings/LocalizationSettings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const SettingsPage = () => {
   const { user, isAdmin, loading: userLoading } = useUser();
@@ -27,26 +28,38 @@ const SettingsPage = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log("SettingsPage mounted, user loading:", userLoading);
+    console.log("Current user state:", user);
+    
     const loadUserProfile = async () => {
-      if (!userLoading && user) {
+      if (!userLoading) {
         try {
-          if (viewingUserId && isAdmin && viewingUserId !== user?.uid) {
-            const otherUserProfile = await getUserProfile(viewingUserId);
-            if (otherUserProfile) {
-              setViewingUser(otherUserProfile as UserProfile);
-              setRole(otherUserProfile.role || "worker");
-              setIsViewingOtherUser(true);
+          if (user) {
+            console.log("User is authenticated, loading settings");
+            if (viewingUserId && isAdmin && viewingUserId !== user?.uid) {
+              console.log("Admin viewing other user:", viewingUserId);
+              const otherUserProfile = await getUserProfile(viewingUserId);
+              if (otherUserProfile) {
+                setViewingUser(otherUserProfile as UserProfile);
+                setRole(otherUserProfile.role || "worker");
+                setIsViewingOtherUser(true);
+              } else {
+                toast({
+                  variant: "destructive",
+                  title: "User not found",
+                  description: "The requested user profile could not be found",
+                });
+                setError("User profile not found");
+              }
             } else {
-              toast({
-                variant: "destructive",
-                title: "User not found",
-                description: "The requested user profile could not be found",
-              });
-              setError("User profile not found");
+              console.log("User viewing own settings");
+              setRole(user?.role || "worker");
+              setIsViewingOtherUser(false);
             }
+            setError(null); // Clear any previous errors
           } else {
-            setRole(user?.role || "worker");
-            setIsViewingOtherUser(false);
+            console.log("No authenticated user found");
+            setError("You need to be logged in to view settings");
           }
         } catch (error) {
           console.error("Error loading user profile:", error);
@@ -59,13 +72,12 @@ const SettingsPage = () => {
         } finally {
           setLoading(false);
         }
-      } else if (!userLoading && !user) {
-        setLoading(false);
-        setError("You need to be logged in to view settings");
       }
     };
 
-    loadUserProfile();
+    if (!userLoading) {
+      loadUserProfile();
+    }
   }, [user, viewingUserId, isAdmin, toast, userLoading]);
 
   // Render loading state while user authentication is being checked
@@ -80,12 +92,30 @@ const SettingsPage = () => {
   }
 
   // Display error if there is one
-  if (error || !user) {
+  if (error) {
     return (
       <Layout>
         <div className="h-full flex flex-col items-center justify-center">
-          <h2 className="text-2xl font-bold text-destructive mb-2">Error Loading Settings</h2>
-          <p className="text-muted-foreground">{error || "Authentication required"}</p>
+          <Alert variant="destructive" className="max-w-md">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error Loading Settings</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </div>
+      </Layout>
+    );
+  }
+
+  // If no user, show not authenticated message
+  if (!user) {
+    return (
+      <Layout>
+        <div className="h-full flex flex-col items-center justify-center">
+          <Alert variant="destructive" className="max-w-md">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Authentication Required</AlertTitle>
+            <AlertDescription>You need to be logged in to view settings</AlertDescription>
+          </Alert>
         </div>
       </Layout>
     );

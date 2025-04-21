@@ -23,22 +23,38 @@ import ReportsPage from "./pages/ReportsPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
 import { Loader2 } from "lucide-react";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => {
   const [firebaseReady, setFirebaseReady] = useState(false);
 
   useEffect(() => {
-    import("./lib/firebase").then(() => {
-      console.log("Firebase initialized in App");
-      setFirebaseReady(true);
-    });
+    const initFirebase = async () => {
+      try {
+        await import("./lib/firebase");
+        console.log("Firebase initialized in App");
+        setFirebaseReady(true);
+      } catch (error) {
+        console.error("Error initializing Firebase:", error);
+        // Show some error state if Firebase fails to initialize
+      }
+    };
+    
+    initFirebase();
   }, []);
 
   if (!firebaseReady) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <span className="ml-2 text-lg text-muted-foreground">Loading application...</span>
       </div>
     );
   }

@@ -48,12 +48,16 @@ const RequireAuth = ({ children }: RequireAuthProps) => {
   const { toast } = useToast();
   
   useEffect(() => {
+    console.log("RequireAuth component mounted");
+    
     const firebasePromise = import("../../lib/firebase").then(() => {
       console.log("Firebase initialized in RequireAuth");
       setFirebaseInitialized(true);
     });
     
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      console.log("Auth state changed:", authUser ? "User logged in" : "No user");
+      
       // Ensure Firebase is initialized before proceeding
       await firebasePromise;
       
@@ -63,10 +67,13 @@ const RequireAuth = ({ children }: RequireAuthProps) => {
         try {
           // Fetch user profile from database
           const userProfile = await getUserProfile(authUser.uid);
+          console.log("User profile retrieved:", userProfile);
+          
           if (userProfile) {
             setUser(userProfile as UserProfile);
           } else {
             // This shouldn't happen unless there's a database inconsistency
+            console.error("User authenticated but profile not found in database");
             toast({
               variant: "destructive",
               title: "User profile not found",
@@ -85,10 +92,14 @@ const RequireAuth = ({ children }: RequireAuthProps) => {
         setIsAuthenticated(false);
         setUser(null);
       }
+      
       setIsLoading(false);
     });
     
-    return () => unsubscribe();
+    return () => {
+      console.log("RequireAuth component unmounting");
+      unsubscribe();
+    };
   }, [toast]);
 
   if (isLoading) {
@@ -100,6 +111,7 @@ const RequireAuth = ({ children }: RequireAuthProps) => {
   }
   
   if (!isAuthenticated) {
+    console.log("User not authenticated, redirecting to login");
     return <Navigate to="/login" replace />;
   }
 
