@@ -81,5 +81,18 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
     "vite": "^5.4.1"
-  }
+  },
+  "description": "**URL**: https://lovable.dev/projects/737079e2-0c69-4ed1-ba54-38605b9df344",
+  "main": "eslint.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AllDv12/stock-savvy-commerce.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AllDv12/stock-savvy-commerce/issues"
+  },
+  "homepage": "https://github.com/AllDv12/stock-savvy-commerce#readme"
 }

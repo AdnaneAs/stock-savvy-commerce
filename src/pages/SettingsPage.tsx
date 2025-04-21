@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/components/auth/RequireAuth";
-import { getUserProfile } from "@/lib/firebase";
+import { getUserProfile, getCurrentUser, isAuthenticated } from "@/lib/firebase";
 import { UserProfile } from "@/components/auth/RequireAuth";
 import ProfileSettings from "@/components/settings/ProfileSettings";
 import AdminSettings from "@/components/settings/AdminSettings";
@@ -30,13 +29,19 @@ const SettingsPage = () => {
   useEffect(() => {
     console.log("SettingsPage mounted, user loading:", userLoading);
     console.log("Current user state:", user);
+    console.log("Firebase auth state:", getCurrentUser(), isAuthenticated());
     
     const loadUserProfile = async () => {
       if (!userLoading) {
         try {
-          if (user) {
+          // First check if authenticated with useUser, then fall back to direct Firebase check
+          const isUserAuthenticated = user || isAuthenticated();
+          
+          if (isUserAuthenticated) {
             console.log("User is authenticated, loading settings");
-            if (viewingUserId && isAdmin && viewingUserId !== user?.uid) {
+            const currentUser = user || getCurrentUser();
+            
+            if (viewingUserId && isAdmin && viewingUserId !== currentUser?.uid) {
               console.log("Admin viewing other user:", viewingUserId);
               const otherUserProfile = await getUserProfile(viewingUserId);
               if (otherUserProfile) {
@@ -53,7 +58,7 @@ const SettingsPage = () => {
               }
             } else {
               console.log("User viewing own settings");
-              setRole(user?.role || "worker");
+              setRole(currentUser?.role || "worker");
               setIsViewingOtherUser(false);
             }
             setError(null); // Clear any previous errors
@@ -106,8 +111,8 @@ const SettingsPage = () => {
     );
   }
 
-  // If no user, show not authenticated message
-  if (!user) {
+  // Check both useUser hook and direct Firebase auth
+  if (!user && !isAuthenticated()) {
     return (
       <Layout>
         <div className="h-full flex flex-col items-center justify-center">

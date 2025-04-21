@@ -1,6 +1,11 @@
-
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  onAuthStateChanged 
+} from "firebase/auth";
 import { 
   createUser, 
   getUserByUid, 
@@ -16,14 +21,14 @@ import {
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBx7YgxGJ-PKuQqq-5RvCRmXj0T9ZTCA-c",
-  authDomain: "stocksavvy-inventory.firebaseapp.com",
-  projectId: "stocksavvy-inventory",
-  storageBucket: "stocksavvy-inventory.appspot.com",
-  messagingSenderId: "391547046129",
-  appId: "1:391547046129:web:b70ef9e6f776c635724f5b"
+  apiKey: "AIzaSyCj70657cHk4894QadtmHsiiJsG3SzZDzI",
+  authDomain: "stock-ges.firebaseapp.com",
+  projectId: "stock-ges",
+  storageBucket: "stock-ges.firebasestorage.app",
+  messagingSenderId: "873691268744",
+  appId: "1:873691268744:web:66f036719639cccb95013d",
+  measurementId: "G-WFVX55BVKD"
 };
-
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -148,6 +153,28 @@ const deleteProduct = async (productId) => {
   return dbDeleteProduct(productId);
 };
 
+// Add auth state observer
+let currentUser = null;
+
+onAuthStateChanged(auth, (user) => {
+  currentUser = user;
+  if (user) {
+    console.log('User is signed in:', user.uid);
+  } else {
+    console.log('User is signed out');
+  }
+});
+
+// Function to get current user
+const getCurrentUser = () => {
+  return auth.currentUser || currentUser;
+};
+
+// Function to check if user is authenticated
+const isAuthenticated = () => {
+  return !!getCurrentUser();
+};
+
 export { 
   auth, 
   googleProvider, 
@@ -159,5 +186,7 @@ export {
   getUserProducts,
   getAllUsers,
   updateUserRole,
-  deleteProduct  // Export the deleteProduct function
+  deleteProduct,
+  getCurrentUser,  // Export the current user function
+  isAuthenticated  // Export authentication check function
 };
