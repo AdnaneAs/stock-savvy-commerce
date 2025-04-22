@@ -7,6 +7,8 @@ import {
   signInWithEmailAndPassword, 
   onAuthStateChanged 
 } from "firebase/auth";
+import { userApi } from "@/services/api";
+import { UserProfile } from "@/components/auth/RequireAuth";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -46,9 +48,80 @@ const isAuthenticated = () => {
   return !!getCurrentUser();
 };
 
+// Functions that were missing and now call the API
+const getUserProfile = async (uid: string): Promise<UserProfile | null> => {
+  try {
+    return await userApi.getUserById(uid);
+  } catch (error) {
+    console.error("Error getting user profile:", error);
+    return null;
+  }
+};
+
+const updateUser = async (uid: string, userData: Partial<UserProfile>) => {
+  try {
+    return await userApi.updateUser(uid, userData);
+  } catch (error) {
+    console.error("Error updating user:", error);
+    throw error;
+  }
+};
+
+const updateUserRole = async (uid: string, role: "admin" | "owner" | "worker") => {
+  try {
+    return await userApi.updateUserRole(uid, role);
+  } catch (error) {
+    console.error("Error updating user role:", error);
+    throw error;
+  }
+};
+
+const getAllUsers = async () => {
+  try {
+    return await userApi.getAllUsers();
+  } catch (error) {
+    console.error("Error getting all users:", error);
+    throw error;
+  }
+};
+
+const createUserProfile = async (uid: string, userData: any) => {
+  try {
+    return await userApi.createUser(uid, userData);
+  } catch (error) {
+    console.error("Error creating user profile:", error);
+    throw error;
+  }
+};
+
+const getUserProducts = async (userId: string) => {
+  try {
+    return await userApi.getUserProducts(userId);
+  } catch (error) {
+    console.error("Error getting user products:", error);
+    return [];
+  }
+};
+
+const deleteProduct = async (productId: string) => {
+  try {
+    return await userApi.deleteProduct(productId);
+  } catch (error) {
+    console.error("Error deleting product:", error);
+    throw error;
+  }
+};
+
 export { 
   auth, 
   googleProvider,
   getCurrentUser,
-  isAuthenticated
+  isAuthenticated,
+  getUserProfile,
+  updateUser,
+  updateUserRole,
+  getAllUsers,
+  createUserProfile,
+  getUserProducts,
+  deleteProduct
 };

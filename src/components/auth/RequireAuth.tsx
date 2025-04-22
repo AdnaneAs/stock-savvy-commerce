@@ -19,6 +19,18 @@ export interface UserProfile {
   role: "admin" | "owner" | "worker";
   photo_url?: string;
   created_at: string;
+  // Add backwards compatibility fields to avoid changing all components
+  get displayName(): string | undefined {
+    return this.name;
+  }
+  get photoURL(): string | undefined {
+    return this.photo_url;
+  }
+  get uid(): string {
+    return this.firebase_uid;
+  }
+  // Virtual property for backwards compatibility
+  invitedUsers: string[];
 }
 
 // Create a context to store and access user data globally
@@ -70,7 +82,12 @@ const RequireAuth = ({ children }: RequireAuthProps) => {
           console.log("User profile retrieved:", userProfile);
           
           if (userProfile) {
-            setUser(userProfile);
+            // Ensure invitedUsers is available for backwards compatibility
+            const profileWithInvitedUsers = {
+              ...userProfile,
+              invitedUsers: userProfile.invitedUsers || []
+            };
+            setUser(profileWithInvitedUsers as UserProfile);
           } else {
             console.error("User authenticated but profile not found");
             toast({

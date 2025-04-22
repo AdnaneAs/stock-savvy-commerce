@@ -3,8 +3,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Product } from "@/lib/database";
 import { useToast } from "@/hooks/use-toast";
-import { getUserProducts, deleteProduct } from "@/lib/firebase";
 import { auth } from "@/lib/firebase";
+import { productsApi } from "@/services/api";
 
 import ProductTableToolbar from "./product-table/ProductTableToolbar";
 import ProductListTable from "./product-table/ProductListTable";
@@ -20,7 +20,7 @@ const ProductTable = () => {
     queryFn: async () => {
       const user = auth.currentUser;
       if (!user) return [];
-      return getUserProducts(user.uid);
+      return productsApi.getUserProducts(user.uid);
     }
   });
 
@@ -35,7 +35,7 @@ const ProductTable = () => {
 
   const handleDelete = async (productId: string) => {
     try {
-      await deleteProduct(productId);
+      await productsApi.deleteProduct(productId);
       await refetch();
       toast({
         title: "Product deleted",

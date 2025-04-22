@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { updateProfile } from "firebase/auth";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { auth } from "@/lib/firebase";
 import { userApi } from "@/services/api";
 
@@ -14,6 +14,7 @@ export default function useAvatarUpload(initialUrl: string = "") {
   const [avatarUrl, setAvatarUrl] = useState(initialUrl);
   const [uploading, setUploading] = useState(false);
   const storage = getStorage();
+  const { toast } = useToast();
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const user = auth.currentUser;
