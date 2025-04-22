@@ -4,6 +4,8 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { updateProfile } from "firebase/auth";
 import { toast } from "@/components/ui/use-toast";
 import { auth } from "@/lib/firebase";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 /**
  * Hook for uploading and updating a user's avatar/profile picture.
@@ -14,6 +16,7 @@ export default function useAvatarUpload(initialUrl: string = "") {
   const [uploading, setUploading] = useState(false);
   const storage = getStorage();
 
+  // The file input can now be passed instead of hardcoded.
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const user = auth.currentUser;
     if (!user) return;
@@ -44,13 +47,15 @@ export default function useAvatarUpload(initialUrl: string = "") {
       const avatarRef = ref(storage, `avatars/${user.uid}`);
       await uploadBytes(avatarRef, file);
       const url = await getDownloadURL(avatarRef);
+      // Update the Firebase Auth user profile
       await updateProfile(user, { photoURL: url });
+      // Update photoURL in Firestore as well!
+      await updateDoc(doc(db, "users", user.uid), { photoURL: url });
       setAvatarUrl(url);
       toast({
         title: "Avatar updated",
         description: "Your profile picture has been updated successfully.",
       });
-      // Return new url for external update if needed
       return url;
     } catch (error: any) {
       toast({
@@ -64,4 +69,4 @@ export default function useAvatarUpload(initialUrl: string = "") {
   };
 
   return { avatarUrl, uploading, handleAvatarUpload, setAvatarUrl };
-};
+}

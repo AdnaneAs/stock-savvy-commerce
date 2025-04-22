@@ -34,7 +34,7 @@ const ProfileSettings = ({ user, isViewingOtherUser, viewingUser }: ProfileSetti
   const role = isViewingOtherUser ? viewingUser?.role : user?.role;
   const invitedUsers = isViewingOtherUser ? viewingUser?.invitedUsers || [] : user?.invitedUsers || [];
 
-  // Avatar Upload Logic
+  // Avatar Upload Logic -- match Profile page!
   const initialPhotoURL = isViewingOtherUser 
     ? viewingUser?.photoURL || `https://i.pravatar.cc/150?u=${email}` 
     : user?.photoURL || `https://i.pravatar.cc/150?u=${email}`;
@@ -44,13 +44,13 @@ const ProfileSettings = ({ user, isViewingOtherUser, viewingUser }: ProfileSetti
   // Sync avatar with user prop changes (if necessary)
   useEffect(() => {
     setAvatarUrl(initialPhotoURL);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.photoURL, viewingUser?.photoURL]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPhotoURL]);
 
   const handleUpdateProfile = async () => {
     const targetUser = isViewingOtherUser ? viewingUser : user;
     if (!targetUser) return;
-    
+
     setIsSubmitting(true);
     try {
       await updateUser(targetUser.uid, {
@@ -65,7 +65,7 @@ const ProfileSettings = ({ user, isViewingOtherUser, viewingUser }: ProfileSetti
           photoURL: avatarUrl
         });
       }
-      
+
       toast({
         title: "Profile updated",
         description: isViewingOtherUser 
@@ -95,89 +95,89 @@ const ProfileSettings = ({ user, isViewingOtherUser, viewingUser }: ProfileSetti
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="flex flex-col items-center space-y-3">
-          <Avatar className="h-20 w-20">
-            <AvatarImage src={avatarUrl} />
-            <AvatarFallback className="text-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground">
-              {displayName?.charAt(0) || email?.charAt(0)}
-            </AvatarFallback>
-          </Avatar>
-          <div className="relative">
-            <Input
-              id="avatar-settings"
-              type="file"
-              accept="image/jpeg, image/png, image/gif"
-              className="hidden"
-              onChange={handleAvatarUpload}
-              ref={fileInputRef}
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2"
-              disabled={uploading}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {uploading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Upload className="h-4 w-4 mr-2" />
-              )}
-              Change Avatar
-            </Button>
+        <div className="flex flex-col sm:flex-row items-center gap-6">
+          <div className="flex flex-col items-center gap-2">
+            <Avatar className="h-24 w-24">
+              <AvatarImage src={avatarUrl} alt={displayName || email || "User"} />
+              <AvatarFallback>
+                {displayName?.charAt(0) || email?.charAt(0) || "U"}
+              </AvatarFallback>
+            </Avatar>
+            <div className="relative">
+              <Input
+                id="avatar-settings"
+                type="file"
+                accept="image/jpeg, image/png, image/gif"
+                className="hidden"
+                onChange={handleAvatarUpload}
+                ref={fileInputRef}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                disabled={uploading}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {uploading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
+                Change Avatar
+              </Button>
+            </div>
+            <Badge variant={role === "admin" ? "destructive" : "default"} className="flex items-center gap-1">
+              {role === "admin" ? <Shield className="h-3 w-3" /> : <User className="h-3 w-3" />}
+              {role === "admin" ? "Administrator" : "User"}
+            </Badge>
           </div>
-          <Badge variant={role === "admin" ? "destructive" : "default"} className="flex items-center gap-1">
-            {role === "admin" ? <Shield className="h-3 w-3" /> : <User className="h-3 w-3" />}
-            {role === "admin" ? "Administrator" : "User"}
-          </Badge>
-        </div>
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="displayName">Display Name</Label>
-            <Input
-              id="displayName"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Your name"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              value={email}
-              disabled
-              className="bg-gray-50"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="role">Role</Label>
-            <Input
-              id="role"
-              value={role === "admin" ? "Administrator" : "User"}
-              disabled
-              className="bg-gray-50"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Invited Users</Label>
-            <div className="p-2 border rounded-md bg-gray-50">
-              {invitedUsers && invitedUsers.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {invitedUsers.map((userId, index) => (
-                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                      <User className="h-3 w-3" />
-                      Invited User {index + 1}
-                    </Badge>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No users invited yet</p>
-              )}
+          <div className="flex-1 w-full space-y-4 mt-6 sm:mt-0">
+            <div className="space-y-2">
+              <Label htmlFor="displayName">Full Name</Label>
+              <Input
+                id="displayName"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Your name"
+                autoComplete="name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                value={email}
+                disabled
+                className="bg-gray-50"
+                autoComplete="email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="role">Role</Label>
+              <Input
+                id="role"
+                value={role === "admin" ? "Administrator" : "User"}
+                disabled
+                className="bg-gray-50"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Invited Users</Label>
+              <div className="p-2 border rounded-md bg-gray-50">
+                {invitedUsers && invitedUsers.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {invitedUsers.map((userId, index) => (
+                      <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        Invited User {index + 1}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No users invited yet</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
