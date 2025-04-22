@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Shield, User } from "lucide-react";  
+import { Shield, User, Loader2, Upload } from "lucide-react";
+import useAvatarUpload from "@/hooks/useAvatarUpload";
 
 interface ProfileSettingsProps {
   user: UserProfile;
@@ -28,11 +29,23 @@ interface ProfileSettingsProps {
 const ProfileSettings = ({ user, isViewingOtherUser, viewingUser }: ProfileSettingsProps) => {
   const { toast } = useToast();
   const [displayName, setDisplayName] = useState(isViewingOtherUser ? viewingUser?.displayName || "" : user?.displayName || "");
-  const [photoURL, setPhotoURL] = useState(isViewingOtherUser ? viewingUser?.photoURL || "" : user?.photoURL || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const email = isViewingOtherUser ? viewingUser?.email : user?.email;
   const role = isViewingOtherUser ? viewingUser?.role : user?.role;
   const invitedUsers = isViewingOtherUser ? viewingUser?.invitedUsers || [] : user?.invitedUsers || [];
+
+  // Avatar Upload Logic
+  const initialPhotoURL = isViewingOtherUser 
+    ? viewingUser?.photoURL || `https://i.pravatar.cc/150?u=${email}` 
+    : user?.photoURL || `https://i.pravatar.cc/150?u=${email}`;
+  const { avatarUrl, uploading, handleAvatarUpload, setAvatarUrl } = useAvatarUpload(initialPhotoURL);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync avatar with user prop changes (if necessary)
+  useEffect(() => {
+    setAvatarUrl(initialPhotoURL);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.photoURL, viewingUser?.photoURL]);
 
   const handleUpdateProfile = async () => {
     const targetUser = isViewingOtherUser ? viewingUser : user;
@@ -40,17 +53,16 @@ const ProfileSettings = ({ user, isViewingOtherUser, viewingUser }: ProfileSetti
     
     setIsSubmitting(true);
     try {
-      // Update user in our database
       await updateUser(targetUser.uid, {
         displayName,
-        photoURL
+        photoURL: avatarUrl
       });
-      
+
       // If updating current user, also update Auth profile
       if (!isViewingOtherUser && auth.currentUser) {
         await updateProfile(auth.currentUser, {
           displayName,
-          photoURL
+          photoURL: avatarUrl
         });
       }
       
@@ -85,11 +97,35 @@ const ProfileSettings = ({ user, isViewingOtherUser, viewingUser }: ProfileSetti
       <CardContent className="space-y-6">
         <div className="flex flex-col items-center space-y-3">
           <Avatar className="h-20 w-20">
-            <AvatarImage src={photoURL || `https://i.pravatar.cc/150?u=${email}`} />
+            <AvatarImage src={avatarUrl} />
             <AvatarFallback className="text-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground">
               {displayName?.charAt(0) || email?.charAt(0)}
             </AvatarFallback>
           </Avatar>
+          <div className="relative">
+            <Input
+              id="avatar-settings"
+              type="file"
+              accept="image/jpeg, image/png, image/gif"
+              className="hidden"
+              onChange={handleAvatarUpload}
+              ref={fileInputRef}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              disabled={uploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {uploading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4 mr-2" />
+              )}
+              Change Avatar
+            </Button>
+          </div>
           <Badge variant={role === "admin" ? "destructive" : "default"} className="flex items-center gap-1">
             {role === "admin" ? <Shield className="h-3 w-3" /> : <User className="h-3 w-3" />}
             {role === "admin" ? "Administrator" : "User"}
@@ -104,16 +140,6 @@ const ProfileSettings = ({ user, isViewingOtherUser, viewingUser }: ProfileSetti
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Your name"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="photoURL">Profile Picture URL</Label>
-            <Input
-              id="photoURL"
-              value={photoURL}
-              onChange={(e) => setPhotoURL(e.target.value)}
-              placeholder="https://example.com/avatar.jpg"
             />
           </div>
           
