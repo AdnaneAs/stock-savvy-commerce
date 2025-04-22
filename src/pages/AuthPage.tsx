@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Boxes } from "lucide-react";
@@ -6,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { auth, googleProvider, createUserProfile } from "@/lib/firebase";
+import { auth, googleProvider } from "@/lib/firebase";
 import { 
   signInWithEmailAndPassword, 
   signInWithPopup, 
@@ -28,7 +27,7 @@ const AuthPage = () => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         localStorage.setItem("isAuthenticated", "true");
-        // navigate("/"); // Don't auto-redirect if on the verify email page!
+        // Don't auto-redirect if on the verify email page
       }
     });
     
@@ -53,6 +52,7 @@ const AuthPage = () => {
         title: "Login failed",
         description: "Please check your credentials and try again",
       });
+    } finally {
       setIsLoading(false);
     }
   };
@@ -67,19 +67,12 @@ const AuthPage = () => {
 
       await sendEmailVerification(user);
 
-      // Create user profile in Firestore
-      await createUserProfile(user.uid, {
-        email,
-        displayName: displayName || email.split('@')[0],
-        role: "user"
-      });
-
       localStorage.setItem("isAuthenticated", "true");
       toast({
         title: "Account created successfully",
         description: "Please verify your email address.",
       });
-      navigate("/verify-email"); // Go to verify email page!
+      navigate("/verify-email");
     } catch (error: any) {
       let errorMessage = "An error occurred during sign up";
       if (error.code === "auth/email-already-in-use") {
@@ -93,6 +86,7 @@ const AuthPage = () => {
         title: "Sign up failed",
         description: errorMessage,
       });
+    } finally {
       setIsLoading(false);
     }
   };
@@ -101,18 +95,6 @@ const AuthPage = () => {
     setIsLoading(true);
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      
-      const isNewUser = user.metadata.creationTime === user.metadata.lastSignInTime;
-      
-      if (isNewUser) {
-        await createUserProfile(user.uid, {
-          email: user.email,
-          displayName: user.displayName || user.email?.split('@')[0] || '',
-          role: "user",
-          photoURL: user.photoURL
-        });
-      }
       
       localStorage.setItem("isAuthenticated", "true");
       toast({
@@ -126,6 +108,7 @@ const AuthPage = () => {
         title: "Google sign-in failed",
         description: "An error occurred during sign-in",
       });
+    } finally {
       setIsLoading(false);
     }
   };
@@ -312,4 +295,3 @@ const AuthPage = () => {
 };
 
 export default AuthPage;
-// ... remind user AuthPage.tsx is now very long

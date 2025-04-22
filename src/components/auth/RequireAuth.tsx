@@ -1,24 +1,24 @@
 
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { auth, getUserProfile } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { userApi } from "@/services/api";
 
 interface RequireAuthProps {
   children: React.ReactNode;
 }
 
 export interface UserProfile {
-  uid: string;
+  id: number;
+  firebase_uid: string;
   email: string;
-  displayName?: string;
+  name?: string;
   role: "admin" | "owner" | "worker";
-  invitedUsers: string[];
-  products?: string[];
-  photoURL?: string;
-  createdAt: Date | string;
+  photo_url?: string;
+  created_at: string;
 }
 
 // Create a context to store and access user data globally
@@ -65,15 +65,14 @@ const RequireAuth = ({ children }: RequireAuthProps) => {
         setIsAuthenticated(true);
         
         try {
-          // Fetch user profile from database
-          const userProfile = await getUserProfile(authUser.uid);
+          // Fetch user profile from our backend
+          const userProfile = await userApi.getCurrentUser();
           console.log("User profile retrieved:", userProfile);
           
           if (userProfile) {
-            setUser(userProfile as UserProfile);
+            setUser(userProfile);
           } else {
-            // This shouldn't happen unless there's a database inconsistency
-            console.error("User authenticated but profile not found in database");
+            console.error("User authenticated but profile not found");
             toast({
               variant: "destructive",
               title: "User profile not found",
