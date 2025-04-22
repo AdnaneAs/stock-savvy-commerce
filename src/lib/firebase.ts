@@ -9,7 +9,7 @@ import {
 } from "firebase/auth";
 import { userApi, productsApi } from "@/services/api";
 import { UserProfile } from "@/components/auth/RequireAuth";
-
+import { getFirestore } from "firebase/firestore";
 // Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyCj70657cHk4894QadtmHsiiJsG3SzZDzI",
@@ -113,6 +113,8 @@ const deleteProduct = async (productId: string) => {
   }
 };
 
+const db = getFirestore(app);
+
 export { 
   auth, 
   googleProvider,
@@ -124,5 +126,6 @@ export {
   getAllUsers,
   createUserProfile,
   getUserProducts,
-  deleteProduct
+  deleteProduct,
+  db
 };
