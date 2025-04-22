@@ -7,7 +7,7 @@ import {
   signInWithEmailAndPassword, 
   onAuthStateChanged 
 } from "firebase/auth";
-import { userApi } from "@/services/api";
+import { userApi, productsApi } from "@/services/api";
 import { UserProfile } from "@/components/auth/RequireAuth";
 
 // Your web app's Firebase configuration
@@ -48,7 +48,7 @@ const isAuthenticated = () => {
   return !!getCurrentUser();
 };
 
-// Functions that were missing and now call the API
+// Functions that call the API
 const getUserProfile = async (uid: string): Promise<UserProfile | null> => {
   try {
     return await userApi.getUserById(uid);
@@ -94,9 +94,10 @@ const createUserProfile = async (uid: string, userData: any) => {
   }
 };
 
+// Product related functions
 const getUserProducts = async (userId: string) => {
   try {
-    return await userApi.getUserProducts(userId);
+    return await productsApi.getUserProducts(userId);
   } catch (error) {
     console.error("Error getting user products:", error);
     return [];
@@ -105,7 +106,7 @@ const getUserProducts = async (userId: string) => {
 
 const deleteProduct = async (productId: string) => {
   try {
-    return await userApi.deleteProduct(productId);
+    return await productsApi.deleteProduct(productId);
   } catch (error) {
     console.error("Error deleting product:", error);
     throw error;

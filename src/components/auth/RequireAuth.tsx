@@ -11,6 +11,7 @@ interface RequireAuthProps {
   children: React.ReactNode;
 }
 
+// Define the interface without getter methods
 export interface UserProfile {
   id: number;
   firebase_uid: string;
@@ -19,16 +20,10 @@ export interface UserProfile {
   role: "admin" | "owner" | "worker";
   photo_url?: string;
   created_at: string;
-  // Add backwards compatibility fields to avoid changing all components
-  get displayName(): string | undefined {
-    return this.name;
-  }
-  get photoURL(): string | undefined {
-    return this.photo_url;
-  }
-  get uid(): string {
-    return this.firebase_uid;
-  }
+  // Add backwards compatibility fields as normal properties
+  displayName?: string;
+  photoURL?: string;
+  uid?: string;
   // Virtual property for backwards compatibility
   invitedUsers: string[];
 }
@@ -82,12 +77,15 @@ const RequireAuth = ({ children }: RequireAuthProps) => {
           console.log("User profile retrieved:", userProfile);
           
           if (userProfile) {
-            // Ensure invitedUsers is available for backwards compatibility
-            const profileWithInvitedUsers = {
+            // Add backward compatibility fields
+            const profileWithCompatFields = {
               ...userProfile,
+              displayName: userProfile.name,
+              photoURL: userProfile.photo_url,
+              uid: userProfile.firebase_uid,
               invitedUsers: userProfile.invitedUsers || []
             };
-            setUser(profileWithInvitedUsers as UserProfile);
+            setUser(profileWithCompatFields as UserProfile);
           } else {
             console.error("User authenticated but profile not found");
             toast({
