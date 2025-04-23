@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +22,9 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
+import { productsApi } from "@/services/api";
+import { useToast } from "@/hooks/use-toast";
+import { auth } from "@/lib/firebase";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -65,6 +67,7 @@ interface AddProductFormProps {
 
 const AddProductForm = ({ initialBarcode = "", onSubmit }: AddProductFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -81,11 +84,30 @@ const AddProductForm = ({ initialBarcode = "", onSubmit }: AddProductFormProps) 
 
   const handleSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
-    
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      // Add product to backend
+      // Choose store_id: for now, assign a static 1 or ask user for better real UX
+      // Get owner (user) id if possible (real app: stores link to user)
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+      const productPayload = {
+        name: data.name,
+        barcode: data.barcode,
+        description: data.description,
+        category: data.category,
+        price: parseFloat(data.price),
+        quantity: parseInt(data.stock),
+        sku: data.sku,
+        store_id: 1 // For this MVP, default store 1. Replace with actual logic per user later!
+      };
+      await productsApi.createProduct(productPayload);
+      toast({
+        title: "Product added",
+        description: `${data.name} has been added to your inventory.`,
+      });
+
       if (onSubmit) {
         onSubmit(data);
       }
@@ -102,6 +124,11 @@ const AddProductForm = ({ initialBarcode = "", onSubmit }: AddProductFormProps) 
       });
     } catch (error) {
       console.error("Error submitting product:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to add product.",
+      });
     } finally {
       setIsSubmitting(false);
     }

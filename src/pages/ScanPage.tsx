@@ -1,33 +1,102 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Layout from "@/components/layout/Layout";
 import BarcodeScanner from "@/components/scanner/BarcodeScanner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Package } from "lucide-react";
+import { ArrowRight, Package, Edit, Minus } from "lucide-react";
 import AddProductForm from "@/components/products/AddProductForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { productsApi } from "@/services/api";
+import { useToast } from "@/hooks/use-toast";
 
 const ScanPage = () => {
   const [scannedBarcode, setScannedBarcode] = useState("");
   const [scanResult, setScanResult] = useState<"new" | "existing" | null>(null);
+  const [foundProduct, setFoundProduct] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("scan");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Get products once, since we need to find by barcode
+  const { data: allProducts = [], refetch: refetchProducts } = useQuery({
+    queryKey: ["products"],
+    queryFn: async () => {
+      return productsApi.getUserProducts("");
+    }
+  });
+
+  // Helper to search for a product by barcode in fetched list
+  const findProductByBarcode = useCallback(
+    (barcode: string) => {
+      return allProducts.find((product: any) => product.barcode === barcode);
+    },
+    [allProducts]
+  );
+
+  // Decrement stock API mutation
+  const decrementStockMutation = useMutation({
+    mutationFn: async (product: any) => {
+      // Update backend
+      const newStock = Math.max(0, (product.quantity || product.stock) - 1);
+      // Use updateProduct API - use proper ID
+      return productsApi.updateProduct(product.id, {
+        ...product,
+        quantity: newStock,
+        stock: newStock,
+      });
+    },
+    onSuccess: async () => {
+      toast({ title: "Stock updated", description: "Stock reduced by 1." });
+      await refetchProducts();
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Error", description: "Could not update stock." });
+    }
+  });
 
   const handleScan = (barcode: string) => {
     setScannedBarcode(barcode);
-    
-    // Simulate checking if product exists
-    // In a real app, this would be an API call
-    if (barcode === "7485963210584") {
-      // This is the barcode for the Wireless Mouse in our demo data
+
+    const product = findProductByBarcode(barcode);
+    if (product) {
       setScanResult("existing");
+      setFoundProduct(product);
     } else {
       setScanResult("new");
+      setFoundProduct(null);
     }
   };
 
   const handleAddNew = () => {
     setActiveTab("add");
+  };
+
+  // Optionally editing product details/stock - for brevity, just inline prompt for now
+  const handleUpdateStock = async (product: any) => {
+    if (!product) return;
+    if (
+      window.confirm(
+        `Decrement stock for ${product.name} (Current stock: ${product.stock ?? product.quantity}) by 1?`
+      )
+    ) {
+      decrementStockMutation.mutate(product);
+    }
+  };
+
+  // TODO: "Edit Details" could open a dialog/form for now just a prompt for name
+  const handleEditDetails = async (product: any) => {
+    if (!product) return;
+    const name = window.prompt("Edit product name:", product.name);
+    if (!name || name === product.name) return;
+    try {
+      await productsApi.updateProduct(product.id, { ...product, name });
+      toast({ title: "Product updated", description: "Product name updated." });
+      await refetchProducts();
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "Could not update the product." });
+    }
   };
 
   return (
@@ -58,22 +127,39 @@ const ScanPage = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {scanResult === "existing" ? (
+                  {scanResult === "existing" && foundProduct ? (
                     <div className="space-y-4">
                       <div className="flex items-center gap-4">
                         <div className="h-12 w-12 bg-muted rounded flex items-center justify-center">
                           <Package />
                         </div>
                         <div>
-                          <h3 className="font-medium">Wireless Mouse</h3>
-                          <p className="text-sm text-muted-foreground">Electronics • $24.99</p>
+                          <h3 className="font-medium">{foundProduct.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {foundProduct.category ?? "Uncategorized"} • ${parseFloat(foundProduct.price ?? 0).toFixed(2)}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center justify-between border-t pt-4">
-                        <p className="text-sm">Current stock: <span className="font-medium">78</span></p>
+                        <p className="text-sm">
+                          Current stock:{" "}
+                          <span className="font-medium">{foundProduct.stock ?? foundProduct.quantity}</span>
+                        </p>
                         <div className="flex gap-2">
-                          <Button variant="outline">Update Stock</Button>
-                          <Button variant="outline">Edit Details</Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => handleUpdateStock(foundProduct)}
+                            className="flex items-center gap-2"
+                          >
+                            <Minus className="h-4 w-4" /> Update Stock
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => handleEditDetails(foundProduct)}
+                            className="flex items-center gap-2"
+                          >
+                            <Edit className="h-4 w-4" /> Edit Details
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -103,9 +189,9 @@ const ScanPage = () => {
               </CardHeader>
               <CardContent>
                 <AddProductForm 
-                  initialBarcode={scannedBarcode} 
-                  onSubmit={(data) => {
-                    console.log("Product data:", data);
+                  initialBarcode={scannedBarcode}
+                  onSubmit={async (data) => {
+                    await refetchProducts();
                     setActiveTab("scan");
                     setScanResult(null);
                   }} 
