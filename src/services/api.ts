@@ -32,8 +32,15 @@ const userApi = {
     }
     
     const data = await response.json();
-    // Add invitedUsers for backward compatibility
-    return { ...data, invitedUsers: data.invitedUsers || [] };
+    // Add virtual fields for backward compatibility
+    return {
+      ...data,
+      // These fields are added by getters in UserProfile interface
+      uid: data.firebase_uid,
+      displayName: data.name,
+      photoURL: data.photo_url,
+      invitedUsers: data.invitedUsers || []
+    };
   },
   
   // Get user by ID
@@ -52,7 +59,13 @@ const userApi = {
     
     const data = await response.json();
     // Add invitedUsers for backward compatibility
-    return { ...data, invitedUsers: data.invitedUsers || [] };
+    return { 
+      ...data, 
+      uid: data.firebase_uid,
+      displayName: data.name,
+      photoURL: data.photo_url,
+      invitedUsers: data.invitedUsers || [] 
+    };
   },
   
   // Update user profile
@@ -64,7 +77,11 @@ const userApi = {
         ...headers,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(userData),
+      body: JSON.stringify({
+        // Map our fields to backend fields
+        name: userData.displayName || userData.name,
+        photo_url: userData.photoURL || userData.photo_url
+      }),
     });
     
     if (!response.ok) {
@@ -83,7 +100,10 @@ const userApi = {
         ...headers,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(userData),
+      body: JSON.stringify({
+        name: userData.displayName || userData.name,
+        photo_url: userData.photoURL || userData.photo_url
+      }),
     });
     
     if (!response.ok) {
@@ -127,8 +147,14 @@ const userApi = {
     }
     
     const users = await response.json();
-    // Add invitedUsers for backward compatibility
-    return users.map((user: any) => ({ ...user, invitedUsers: user.invitedUsers || [] }));
+    // Add compatibility fields
+    return users.map((user: any) => ({ 
+      ...user, 
+      uid: user.firebase_uid,
+      displayName: user.name,
+      photoURL: user.photo_url,
+      invitedUsers: user.invitedUsers || [] 
+    }));
   },
   
   // Create a new user (admin only)
@@ -170,7 +196,14 @@ const productsApi = {
       throw new Error(`Failed to fetch products: ${response.statusText}`);
     }
     
-    return response.json();
+    const products = await response.json();
+    // Map MongoDB _id to id for frontend compatibility
+    return products.map((product: any) => ({
+      ...product,
+      id: product._id,
+      // Stock is equivalent to quantity in our model
+      stock: product.quantity
+    }));
   },
   
   // Create a new product
@@ -182,14 +215,23 @@ const productsApi = {
         ...headers,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(productData),
+      body: JSON.stringify({
+        ...productData,
+        // Ensure quantity is properly set from stock if provided
+        quantity: productData.stock || productData.quantity || 0
+      }),
     });
     
     if (!response.ok) {
       throw new Error(`Failed to create product: ${response.statusText}`);
     }
     
-    return response.json();
+    const product = await response.json();
+    return {
+      ...product,
+      id: product._id,
+      stock: product.quantity
+    };
   },
   
   // Update a product
@@ -201,14 +243,23 @@ const productsApi = {
         ...headers,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(productData),
+      body: JSON.stringify({
+        ...productData,
+        // Ensure quantity is properly set from stock if provided
+        quantity: productData.stock !== undefined ? productData.stock : productData.quantity
+      }),
     });
     
     if (!response.ok) {
       throw new Error(`Failed to update product: ${response.statusText}`);
     }
     
-    return response.json();
+    const product = await response.json();
+    return {
+      ...product,
+      id: product._id,
+      stock: product.quantity
+    };
   },
   
   // Delete a product
@@ -230,5 +281,71 @@ const productsApi = {
   },
 };
 
-// Update the exports to include the new product API
-export { userApi, productsApi };
+// API functions for stores
+const storesApi = {
+  // Get stores for current user
+  getUserStores: async () => {
+    const headers = await getAuthHeader();
+    const response = await fetch(`${API_URL}/stores`, {
+      headers: {
+        ...headers,
+        "Content-Type": "application/json",
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch stores: ${response.statusText}`);
+    }
+    
+    const stores = await response.json();
+    return stores.map((store: any) => ({
+      ...store,
+      id: store._id
+    }));
+  },
+  
+  // Create a new store
+  createStore: async (storeData: { name: string }) => {
+    const headers = await getAuthHeader();
+    const response = await fetch(`${API_URL}/stores`, {
+      method: "POST",
+      headers: {
+        ...headers,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(storeData),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to create store: ${response.statusText}`);
+    }
+    
+    const store = await response.json();
+    return {
+      ...store,
+      id: store._id
+    };
+  },
+  
+  // Invite a worker to a store
+  inviteWorker: async (email: string, storeId: string) => {
+    const headers = await getAuthHeader();
+    const response = await fetch(`${API_URL}/invite-worker`, {
+      method: "POST",
+      headers: {
+        ...headers,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, store_id: storeId }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to invite worker: ${response.statusText}`);
+    }
+    
+    return response.json();
+  },
+};
+
+// Export the APIs
+export { userApi, productsApi, storesApi };
