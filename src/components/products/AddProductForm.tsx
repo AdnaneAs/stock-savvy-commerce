@@ -22,8 +22,8 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { productsApi } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
+import { productsApi } from "@/services/api";
 import { auth } from "@/lib/firebase";
 
 const formSchema = z.object({
@@ -91,16 +91,16 @@ const AddProductForm = ({ initialBarcode = "", onSubmit }: AddProductFormProps) 
       const user = auth.currentUser;
       if (!user) {
         throw new Error("User not authenticated");
-      }
-      const productPayload = {
+      }      const productPayload = {
         name: data.name,
         barcode: data.barcode,
-        description: data.description,
+        description: data.description || "",
         category: data.category,
         price: parseFloat(data.price),
         quantity: parseInt(data.stock),
-        sku: data.sku,
-        store_id: 1 // For this MVP, default store 1. Replace with actual logic per user later!
+        sku: data.sku || "",
+        // For now, we'll use "default" as a special identifier that the backend will recognize
+        store_id: "default"
       };
       await productsApi.createProduct(productPayload);
       toast({
