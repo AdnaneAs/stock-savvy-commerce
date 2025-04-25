@@ -17,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   await connectToDatabase();
   
   // Check authentication
-  const authResult = await verifyToken(req);
+  const authResult = await verifyToken(req);  
   if (!authResult.success) {
     return res.status(401).json({ error: authResult.error });
   }

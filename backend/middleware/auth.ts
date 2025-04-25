@@ -1,13 +1,28 @@
 
 import { NextRequest, NextResponse } from 'next/server';
+import { NextApiRequest } from 'next';
 import { auth } from '../lib/firebase-admin';
-import { connectToDatabase } from '../lib/mongodb';
+import connectToDatabase from '../lib/mongodb';
 import { User } from '../models/User';
 
-export async function verifyToken(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  const token = authHeader?.split('Bearer ')[1];
-  
+// Define a type that can handle both API types
+type RequestWithAuth = NextRequest | NextApiRequest;
+
+// Helper function to extract token based on request type
+function extractToken(req: RequestWithAuth): string | undefined {
+  // Handle NextRequest (App Router)
+  if ('nextUrl' in req) {
+    return req.headers.get('authorization')?.split('Bearer ')[1];
+  } 
+  // Handle NextApiRequest (Pages Router)
+  else {
+    const authHeader = req.headers.authorization as string | undefined;
+    return authHeader?.split('Bearer ')[1];
+  }
+}
+
+export async function verifyToken(req: RequestWithAuth) {
+  const token = extractToken(req);
   if (!token) {
     return { success: false, error: 'No token provided' };
   }
@@ -29,7 +44,7 @@ export async function verifyToken(req: NextRequest) {
         firebase_uid: firebaseUid,
         email: decodedToken.email || '',
         name: decodedToken.name || decodedToken.email?.split('@')[0] || '',
-        role: 'worker', // Default role
+        role: 'owner', // Default role
         photo_url: decodedToken.picture || ''
       });
     }
@@ -41,6 +56,7 @@ export async function verifyToken(req: NextRequest) {
   }
 }
 
+// This middleware is intended for use with App Router only
 export async function authMiddleware(req: NextRequest) {
   const result = await verifyToken(req);
   
