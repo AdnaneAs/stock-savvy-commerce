@@ -8,12 +8,15 @@ import { productsApi } from "@/services/api";
 
 import ProductTableToolbar from "./product-table/ProductTableToolbar";
 import ProductListTable from "./product-table/ProductListTable";
+import EditProductModal from "./EditProductModal";
 
 const ProductTable = () => {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<keyof Product | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const { data: products = [], isLoading, refetch } = useQuery({
     queryKey: ['products'],
@@ -32,7 +35,6 @@ const ProductTable = () => {
       setSortDirection("asc");
     }
   };
-
   const handleDelete = async (productId: string) => {
     try {
       await productsApi.deleteProduct(productId);
@@ -48,6 +50,11 @@ const ProductTable = () => {
         description: "Failed to delete the product.",
       });
     }
+  };
+  
+  const handleEdit = (product: Product) => {
+    setSelectedProduct(product);
+    setIsEditModalOpen(true);
   };
 
   const filteredProducts = products
@@ -66,7 +73,6 @@ const ProductTable = () => {
         return aValue < bValue ? 1 : -1;
       }
     });
-
   return (
     <div className="space-y-4">
       <ProductTableToolbar
@@ -77,9 +83,18 @@ const ProductTable = () => {
         products={filteredProducts}
         isLoading={isLoading}
         onDelete={handleDelete}
+        onEdit={handleEdit}
         onSort={handleSort}
         sortField={sortField}
         sortDirection={sortDirection}
+      />
+      
+      {/* Edit Product Modal */}
+      <EditProductModal
+        product={selectedProduct}
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        onSuccess={refetch}
       />
     </div>
   );

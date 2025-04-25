@@ -233,11 +233,10 @@ const productsApi = {
       stock: product.quantity
     };
   },
-  
-  // Update a product
+    // Update a product
   updateProduct: async (productId: string, productData: any) => {
     const headers = await getAuthHeader();
-    const response = await fetch(`${API_URL}/products/${productId}`, {
+    const response = await fetch(`${API_URL}/products?id=${productId}`, {
       method: "PUT",
       headers: {
         ...headers,
@@ -261,11 +260,10 @@ const productsApi = {
       stock: product.quantity
     };
   },
-  
-  // Delete a product
+    // Delete a product
   deleteProduct: async (productId: string) => {
     const headers = await getAuthHeader();
-    const response = await fetch(`${API_URL}/products/${productId}`, {
+    const response = await fetch(`${API_URL}/products?id=${productId}`, {
       method: "DELETE",
       headers: {
         ...headers,

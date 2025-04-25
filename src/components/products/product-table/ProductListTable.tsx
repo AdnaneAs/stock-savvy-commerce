@@ -8,6 +8,7 @@ interface ProductListTableProps {
   products: Product[];
   isLoading: boolean;
   onDelete: (productId: string) => void;
+  onEdit?: (product: Product) => void;
   onSort: (field: keyof Product) => void;
   sortField: keyof Product | null;
   sortDirection: "asc" | "desc";
@@ -20,6 +21,7 @@ export default function ProductListTable({
   products,
   isLoading,
   onDelete,
+  onEdit,
   onSort,
   sortField,
   sortDirection,
@@ -93,9 +95,11 @@ export default function ProductListTable({
                 <TableCell className="text-right">{product.stock}</TableCell>
                 <TableCell>
                   <ProductStatusBadge stock={product.stock} />
-                </TableCell>
-                <TableCell>
-                  <ProductRowActions onDelete={() => onDelete(product.id)} />
+                </TableCell>                <TableCell>
+                  <ProductRowActions 
+                    onDelete={() => onDelete(product.id)} 
+                    onEdit={onEdit ? () => onEdit(product) : undefined}
+                  />
                 </TableCell>
               </TableRow>
             ))

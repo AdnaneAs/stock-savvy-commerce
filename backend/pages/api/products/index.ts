@@ -12,7 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Handle CORS
   await corsMiddleware(req, res);
   
-  // // Handle preflight OPTIONS request
+  // Handle preflight OPTIONS request
   // if (req.method === 'OPTIONS') {
   //   return res.status(200).end();
   // }
@@ -28,6 +28,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
   
   const user = authResult.user;
+  
+  // Check if there's a product ID in the query parameters (for single product operations)
+  const productId = req.query.id as string;
   
   // GET - List products based on user role
   if (req.method === 'GET') {
@@ -133,7 +136,82 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Failed to create product' });
     }
   }
-  
+    // If we have a product ID, handle single product operations (GET, PUT, DELETE)
+  if (productId) {
+    try {
+      // Find the product
+      const product = await Product.findById(productId);
+      
+      if (!product) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+      
+      // Check permissions to access this product
+      let hasAccess = false;
+      
+      if (user.role === 'admin') {
+        hasAccess = true;
+      } else if (user.role === 'owner') {
+        // Owners can access products in their stores
+        const store = await Store.findOne({ 
+          _id: product.store_id, 
+          owner_id: user._id 
+        });
+        hasAccess = !!store;
+      } else {
+        // Workers can access products in stores they have access to
+        const access = await UserStoreAccess.findOne({ 
+          user_id: user._id, 
+          store_id: product.store_id,
+          role: { $in: ['owner', 'worker'] }
+        });
+        hasAccess = !!access;
+      }
+      
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'You do not have permission to access this product' });
+      }
+      
+      // GET - Get a single product
+      if (req.method === 'GET') {
+        return res.status(200).json(product);
+      }
+      
+      // PUT - Update the product
+      if (req.method === 'PUT') {
+        const { name, description, barcode, sku, category, price, quantity } = req.body;
+        
+        // Update the product
+        const updatedProduct = await Product.findByIdAndUpdate(
+          productId,
+          {
+            name,
+            description,
+            barcode,
+            sku,
+            category,
+            price,
+            quantity,
+            updated_by: user._id,
+            updated_at: new Date()
+          },
+          { new: true } // Return the updated document
+        );
+        
+        return res.status(200).json(updatedProduct);
+      }
+      
+      // DELETE - Delete the product
+      if (req.method === 'DELETE') {
+        await Product.findByIdAndDelete(productId);
+        return res.status(200).json({ success: true, message: 'Product deleted successfully' });
+      }
+    } catch (error) {
+      console.error('Error handling product request:', error);
+      return res.status(500).json({ error: 'Failed to process request' });
+    }
+  }
+
   // Method not allowed
   return res.status(405).json({ error: 'Method not allowed' });
 }
